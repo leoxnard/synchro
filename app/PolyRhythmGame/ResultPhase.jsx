@@ -3,8 +3,8 @@ import React from 'react';
 export default function ResultPhase({
     score,
     tracks,
-    expectedTapsRef,
-    detailedResultsRef,
+    expectedTaps,
+    detailedResults,
     measureDuration,
     measures,
     setGameState
@@ -24,19 +24,19 @@ export default function ResultPhase({
       
             {/* VISUALIZATION */}
             <div className="w-full space-y-5 bg-neutral-800/50 p-5 rounded-2xl border border-neutral-700/50">
-                {tracks.map((track, i) => {
+                {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
-                    const expectedForTrack = expectedTapsRef.current.filter(e => e.trackId === track.id && e.measureIndex === 0);
+                    const expectedForTrack = expectedTaps.filter(e => e.trackId === track.id && e.measureIndex === 0);
           
                     const expectedBaseTimes = [...expectedForTrack.map(e => e.baseTime)];
-                    const hitsForTrack = detailedResultsRef.current.filter(d => d.trackId === track.id && d.actualTime !== null);
+                    const hitsForTrack = detailedResults.filter(d => d.trackId === track.id && d.actualTime !== null);
                     const totalRowsForTrack = measures + 1;
 
                     return (
                         <div key={track.id} className="relative bg-neutral-900/50 rounded-lg border border-neutral-700 mt-6 overflow-visible px-6 py-4">
                             <div className="absolute -top-3 left-4 px-2 bg-neutral-800 text-xs font-bold text-neutral-400 rounded border border-neutral-700 z-30">
-                 Key '{displayKey}' ({track.pulses} Beats)
+                                Key &apos;{displayKey}&apos; ({track.pulses} Beats)
                             </div>
                
                             <div className="relative w-[94%] left-[3%] mt-2">

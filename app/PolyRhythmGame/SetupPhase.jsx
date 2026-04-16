@@ -41,7 +41,7 @@ export default function SetupPhase({
             </div>
       
             <div className="space-y-4 mb-6">
-                {tracks.map((track, index) => {
+                {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
           

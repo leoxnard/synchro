@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 import PolyRhythmGame from "./PolyRhythmGame/PolyRhythmGame";
 
 export default function Home() {

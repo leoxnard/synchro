@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
     const pointerRef = useRef(null);
@@ -60,7 +60,6 @@ export default function PlayingPhase({
     activeKeys,
     startTime,
     measureDuration,
-    basePulses,
     measures
 }) {
     if (gameState === 'countIn') {
@@ -96,7 +95,7 @@ export default function PlayingPhase({
             </div>
       
             <div className="flex justify-center gap-12">
-                {tracks.map((track, i) => {
+                {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
                     const isPressed = activeKeys[assignedKey];

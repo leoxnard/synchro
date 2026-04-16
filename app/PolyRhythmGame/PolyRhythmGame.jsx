@@ -5,8 +5,6 @@ import SetupPhase from './SetupPhase';
 import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
 
-const TOLERANCE_MS = 200; 
-
 export default function PolyrhythmGame() {
     const [gameState, setGameState] = useState('setup'); 
     const [count, setCount] = useState(4); 
@@ -19,6 +17,8 @@ export default function PolyrhythmGame() {
     ]);
     const [score, setScore] = useState(0);
     const [activeKeys, setActiveKeys] = useState({});
+    const [expectedTaps, setExpectedTaps] = useState([]);
+    const [detailedResults, setDetailedResults] = useState([]);
 
     const measureDuration = (60 / bpm) * 4 * 1000;
 
@@ -144,7 +144,9 @@ export default function PolyrhythmGame() {
         timeoutsRef.current.forEach(clearTimeout);
         timeoutsRef.current = [];
 
-        expectedTapsRef.current = calculateExpectedTaps();
+        const nextExpectedTaps = calculateExpectedTaps();
+        expectedTapsRef.current = nextExpectedTaps;
+        setExpectedTaps(nextExpectedTaps);
         actualTapsRef.current = [];
     
     
@@ -234,8 +236,7 @@ export default function PolyrhythmGame() {
         let maxAllowedDeviation = 0; 
         const expected = expectedTapsRef.current;
         const availableActualTaps = [...actualTapsRef.current];
-    
-        detailedResultsRef.current = [];
+        const nextDetailedResults = [];
 
         expected.forEach(exp => {
       
@@ -250,7 +251,7 @@ export default function PolyrhythmGame() {
             if (matchingTaps.length === 0) {
         
                 totalDeviation += maxErrorForBeat;
-                detailedResultsRef.current.push({ ...exp, actualTime: null, diff: null });
+                nextDetailedResults.push({ ...exp, actualTime: null, diff: null });
                 return; 
             }
 
@@ -266,7 +267,7 @@ export default function PolyrhythmGame() {
         
                 totalDeviation += absDiff;
         
-                detailedResultsRef.current.push({
+                nextDetailedResults.push({
                     ...exp,
                     actualTime: closestTap.time,
                     diff
@@ -280,7 +281,7 @@ export default function PolyrhythmGame() {
             } else {
         
                 totalDeviation += maxErrorForBeat;
-                detailedResultsRef.current.push({ ...exp, actualTime: null, diff: null });
+                nextDetailedResults.push({ ...exp, actualTime: null, diff: null });
             }
         });
 
@@ -295,7 +296,7 @@ export default function PolyrhythmGame() {
             if (track) {
                 const measureIndex = Math.floor(act.time / measureDuration);
                 const baseTime = act.time % measureDuration;
-                detailedResultsRef.current.push({
+                nextDetailedResults.push({
                     trackId: track.id,
                     key: act.key,
                     baseTime: baseTime,
@@ -306,6 +307,9 @@ export default function PolyrhythmGame() {
                 });
             }
         });
+
+        detailedResultsRef.current = nextDetailedResults;
+        setDetailedResults(nextDetailedResults);
 
         const finalPercentage = maxAllowedDeviation > 0 
             ? 100 - ((totalDeviation / maxAllowedDeviation) * 100) 
@@ -391,7 +395,6 @@ export default function PolyrhythmGame() {
                     activeKeys={activeKeys}
                     startTime={startTimeRef.current}
                     measureDuration={measureDuration}
-                    basePulses={tracks.find(t => t.id === baseTrackId)?.pulses || tracks[0].pulses}
                     measures={measures}
                 />
             )}
@@ -401,8 +404,8 @@ export default function PolyrhythmGame() {
                 <ResultPhase 
                     score={score}
                     tracks={tracks}
-                    expectedTapsRef={expectedTapsRef}
-                    detailedResultsRef={detailedResultsRef}
+                    expectedTaps={expectedTaps}
+                    detailedResults={detailedResults}
                     measureDuration={measureDuration}
                     measures={measures}
                     setGameState={setGameState}
