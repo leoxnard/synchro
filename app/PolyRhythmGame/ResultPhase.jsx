@@ -7,6 +7,8 @@ export default function ResultPhase({
     detailedResults,
     measureDuration,
     measures,
+    lastAutoCorrectionMs,
+    hasManualCalibration,
     setGameState
 }) {
     return (
@@ -19,14 +21,41 @@ export default function ResultPhase({
                 onClick={() => setGameState('setup')}
                 className="px-8 py-3 flex items-center gap-2 rounded-lg bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 transition-colors font-medium text-lg mb-12"
             >
-        Try Again <span className="text-xs bg-neutral-700 px-2 py-1 rounded text-neutral-300 ml-1 tracking-widest">Space</span>
+                Try Again
+                <span className="text-xs bg-neutral-700 px-2 py-1 rounded text-neutral-300 ml-1 tracking-widest">Enter</span>
             </button>
+
+            <div className="w-full max-w-2xl bg-neutral-800/50 border border-neutral-700 rounded-lg p-4 mb-8 text-center">
+                <div className="text-sm text-neutral-400 mb-3">Audio Correction</div>
+                <div className="flex gap-6 justify-center">
+                    <div>
+                        <div className="text-xs text-neutral-500 mb-1">Calibration Mode</div>
+                        <div className={`text-sm font-bold ${hasManualCalibration ? 'text-blue-400' : 'text-amber-400'}`}>
+                            {hasManualCalibration ? 'Manual' : 'Auto-Detect'}
+                        </div>
+                    </div>
+                    {!hasManualCalibration && lastAutoCorrectionMs !== 0 && (
+                        <div>
+                            <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
+                            <div className="text-sm font-bold text-emerald-400">
+                                {lastAutoCorrectionMs > 0 ? '+' : ''}{lastAutoCorrectionMs}ms
+                            </div>
+                        </div>
+                    )}
+                    {!hasManualCalibration && lastAutoCorrectionMs === 0 && (
+                        <div>
+                            <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
+                            <div className="text-sm font-bold text-neutral-400">None detected</div>
+                        </div>
+                    )}
+                </div>
+            </div>
       
             {/* VISUALIZATION */}
             <div className="w-full space-y-5 bg-neutral-800/50 p-5 rounded-2xl border border-neutral-700/50">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
-                    const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
+                    const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
                     const expectedForTrack = expectedTaps.filter(e => e.trackId === track.id && e.measureIndex === 0);
           
                     const expectedBaseTimes = [...expectedForTrack.map(e => e.baseTime)];
