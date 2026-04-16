@@ -446,7 +446,7 @@ export default function PolyrhythmGame() {
     });
 
     return (
-        <div className="min-h-screen bg-neutral-900 text-neutral-100 flex flex-col items-center justify-center p-8 font-sans">
+        <div className="bg-neutral-900 text-neutral-100 flex flex-col items-center justify-center p-8 font-sans">
       
             <div className="mb-12 text-center">
                 <h1 className="text-4xl font-light tracking-widest text-white mb-2">POLY<span className="font-bold text-emerald-400">RHYTHM</span></h1>
