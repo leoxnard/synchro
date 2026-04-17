@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import PolyRhythmGame from "./PolyRhythmGame/PolyRhythmGame";
 import TempoRecognitionGame from "./TempoRecognitionGame/TempoRecognitionGame";
 
@@ -16,7 +17,8 @@ export default function Home() {
     return (
         <div className="flex flex-col h-screen bg-neutral-900 font-sans overflow-hidden">
             <nav className="w-full flex-none">
-                <div className="mx-auto px-4 py-4 flex gap-2">
+                <div className="mx-auto px-4 py-4 flex items-center justify-between gap-2">
+                    <div className="flex gap-2">
                     {GAMES.map(game => (
                         <button
                             key={game.id}
@@ -30,6 +32,21 @@ export default function Home() {
                             {game.label}
                         </button>
                     ))}
+                    </div>
+                    <div className="flex gap-4">
+                        <Link
+                            href="/legal-notice"
+                            className="px-3 py-2 text-sm text-neutral-400 transition-colors hover:text-neutral-200"
+                        >
+                            Legal Notice
+                        </Link>
+                        <Link
+                            href="/privacy"
+                            className="px-3 py-2 text-sm text-neutral-400 transition-colors hover:text-neutral-200"
+                        >
+                            Privacy
+                        </Link>
+                    </div>
                 </div>
             </nav>
             <main className="flex-1 w-full flex items-center justify-center p-8 overflow-auto">

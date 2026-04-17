@@ -24,13 +24,15 @@ body {
     radial-gradient(circle at 15% 0%, rgba(45, 212, 191, 0.12), transparent 38%),
     radial-gradient(circle at 85% 100%, rgba(34, 211, 238, 0.1), transparent 40%),
     var(--background);
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 140% 140%, 140% 140%, auto;
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Avenir Next", "Helvetica Neue", sans-serif;
 }
 
 input[type="number"] {
-  appearance: textfield;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
