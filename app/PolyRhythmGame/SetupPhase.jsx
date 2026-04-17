@@ -44,7 +44,7 @@ function NumberStepper({
                     step={step}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className={`w-full bg-neutral-900 rounded-lg pl-6 border border-neutral-700 focus:border-emerald-400 focus:outline-none transition-colors font-bold text-center appearance-none ${compact ? 'h-9 px-2 pr-8 text-base' : 'h-11 px-3 pr-10 text-lg'}`}
+                    className={`w-full bg-neutral-900 rounded-lg pl-6 border border-neutral-700 focus:border-stone-400 focus:outline-none transition-colors font-bold text-center appearance-none ${compact ? 'h-9 px-2 pr-8 text-base' : 'h-11 px-3 pr-10 text-lg'}`}
                 />
                 <div className="absolute right-1 top-1 bottom-1 aspect-[1/2] flex flex-col rounded-md overflow-hidden border border-neutral-700 bg-neutral-800/80">
                     <button
@@ -191,14 +191,14 @@ export default function SetupPhase({
                             <span className="text-xl font-bold text-neutral-600">on</span>
             
                             <div 
-                                className="flex-1 bg-neutral-900/80 hover:bg-neutral-800 rounded-lg p-2 flex items-center justify-center border border-neutral-700 focus-within:border-emerald-400 transition-colors cursor-pointer outline-none relative group"
+                                className="flex-1 bg-neutral-900/80 hover:bg-neutral-800 rounded-lg p-2 flex items-center justify-center border border-neutral-700 focus-within:border-stone-400 transition-colors cursor-pointer outline-none relative group"
                                 tabIndex={0}
                                 onKeyDown={(e) => {
                                     e.preventDefault();
                                     updateTrack(track.id, 'key', e.key.toLowerCase());
                                 }}
                             >
-                                <span className="text-xl font-bold text-emerald-400/80 uppercase tracking-widest">{displayKey}</span>
+                                <span className="text-xl font-bold text-stone-400/80 uppercase tracking-widest">{displayKey}</span>
                                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                                     Click & Press Key
                                 </div>
@@ -226,7 +226,7 @@ export default function SetupPhase({
                 <div className="flex gap-2">
                     <button 
                         onClick={startGame}
-                        className="px-8 py-3 flex items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-900 font-bold transition-all transform hover:scale-105"
+                        className="px-8 py-3 flex items-center gap-2 rounded-lg bg-stone-500 hover:bg-stone-400 text-neutral-900 font-bold transition-all transform hover:scale-105"
                     >
                         START 
                         <span className="text-xs bg-neutral-900/20 px-2 py-1 rounded text-neutral-800 tracking-widest ml-1">

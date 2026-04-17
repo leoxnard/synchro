@@ -1,15 +1,59 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { motion, useAnimationFrame } from 'framer-motion';
 
-const LISTENING_DURATION_MS = 6000;
+const LISTENING_DURATION_MS = 5000;
+
+const DynamicAudioWave = ({ baseRadius, color, volatility, speed, strokeWidth }) => {
+    const pathRef = useRef(null);
+
+    useAnimationFrame((time) => {
+        const t = time * speed;
+        let points = [];
+        
+        for (let i = 0; i <= 360; i += 1) {
+            const angle = (i * Math.PI) / 180;
+
+            let noise = 0;
+            noise += Math.sin(angle * 7 + t * 0.001) * (volatility * 0.25);
+            noise += Math.cos(angle * 19 - t * 0.002) * (volatility * 0.25);
+            noise += Math.sin(angle * 43 + t * 0.006) * (volatility * 0.2);
+            noise += Math.cos(angle * 97 - t * 0.01) * (volatility * 0.15); 
+
+            const crackle = (Math.random() - 0.5) * (volatility * 0.6);
+
+            const r = baseRadius + noise + crackle;
+            const x = 50 + r * Math.cos(angle);
+            const y = 50 + r * Math.sin(angle);
+
+            points.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`);
+        }
+
+        if (pathRef.current) {
+            pathRef.current.setAttribute('d', points.join(' ') + ' Z');
+        }
+    });
+
+    return (
+        <path
+            ref={pathRef}
+            fill="transparent"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            style={{ filter: `drop-shadow(0px 0px 4px ${color})` }}
+        />
+    );
+};
 
 export default function ListeningPhase({ targetTempo, audioCtx, onListeningComplete }) {
     const [progress, setProgress] = useState(100);
-    const [pulseSeed, setPulseSeed] = useState(0);
+    const [pulses, setPulses] = useState([]);
+    const [centerPulseKey, setCenterPulseKey] = useState(0);
     const schedulerRef = useRef(null);
     const nextBeatTimeRef = useRef(0);
     const startTimeRef = useRef(0);
     const animationFrameRef = useRef(null);
     const pulseTimeoutRefs = useRef([]);
+    const pulseIdRef = useRef(0);
 
     const playClick = (time, ctx) => {
         const osc = ctx.createOscillator();
@@ -26,7 +70,15 @@ export default function ListeningPhase({ targetTempo, audioCtx, onListeningCompl
     const schedulePulse = (beatTime, ctx) => {
         const delayMs = Math.max(0, (beatTime - ctx.currentTime) * 1000);
         const timeoutId = setTimeout(() => {
-            setPulseSeed(seed => seed + 1);
+            const pulseId = ++pulseIdRef.current;
+            setPulses(prev => [...prev, pulseId]);
+            setCenterPulseKey(pulseId);
+
+            const cleanupId = setTimeout(() => {
+                setPulses(prev => prev.filter(id => id !== pulseId));
+            }, 2100); 
+
+            pulseTimeoutRefs.current.push(cleanupId);
         }, delayMs);
 
         pulseTimeoutRefs.current.push(timeoutId);
@@ -34,6 +86,10 @@ export default function ListeningPhase({ targetTempo, audioCtx, onListeningCompl
 
     useEffect(() => {
         if (!audioCtx) return;
+
+        if (audioCtx.state !== 'running') {
+            audioCtx.resume().catch(() => {});
+        }
 
         const audioStartTime = audioCtx.currentTime;
         const endTime = audioStartTime + LISTENING_DURATION_MS / 1000;
@@ -44,7 +100,6 @@ export default function ListeningPhase({ targetTempo, audioCtx, onListeningCompl
             const beatDurationSec = 60 / targetTempo;
             const now = audioCtx.currentTime;
 
-            // Schedule all beats that should play before the next scheduling
             while (nextBeatTimeRef.current < endTime && nextBeatTimeRef.current < now + 0.1) {
                 playClick(nextBeatTimeRef.current, audioCtx);
                 schedulePulse(nextBeatTimeRef.current, audioCtx);
@@ -58,7 +113,6 @@ export default function ListeningPhase({ targetTempo, audioCtx, onListeningCompl
 
         scheduleBeats();
 
-        // Smooth progress update using requestAnimationFrame
         const updateProgress = () => {
             const elapsed = Date.now() - startTimeRef.current;
             const remaining = Math.max(0, LISTENING_DURATION_MS - elapsed);
@@ -82,22 +136,48 @@ export default function ListeningPhase({ targetTempo, audioCtx, onListeningCompl
     }, [targetTempo, audioCtx, onListeningComplete]);
 
     return (
-        <div className="w-full flex items-center justify-center">
-            <div className="text-center">
-                <div className="relative mx-auto mb-12 h-20 w-20">
-                    <div
-                        key={pulseSeed}
-                        className="absolute inset-0 rounded-full bg-emerald-400 opacity-70 animate-ping"
+        <div className="h-full w-full flex flex-col items-center justify-center">
+            <div className="relative w-full max-w-lg h-full text-center flex flex-col items-center justify-between py-6">
+                <div 
+                    className="relative mx-auto mt-auto mb-6 h-48 w-48"
+                    style={{ perspective: '800px' }}
+                >
+                    {pulses.map((pulseId) => (
+                        <motion.div 
+                            key={pulseId} 
+                            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                            initial={{ scale: 0.5, z: -5, opacity: 1 }}
+                            animate={{ scale: 2, z: 80, opacity: [1, 0.8, 0] }}
+                            transition={{ 
+                                duration: 2, 
+                                ease: "easeOut",
+                                times: [0, 0.7, 1] 
+                            }}
+                        >
+                            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
+                                <DynamicAudioWave baseRadius={40} color="rgba(16, 185, 129, 0.7)" volatility={4} speed={1.2} strokeWidth="0.2" />
+                                <DynamicAudioWave baseRadius={39} color="rgba(255, 255, 255, 0.5)" volatility={5.5} speed={1.8} strokeWidth="0.15" />
+                                <DynamicAudioWave baseRadius={38} color="rgba(255, 255, 255, 0.3)" volatility={7} speed={2.5} strokeWidth="0.1" />
+                            </svg>
+                        </motion.div>
+                    ))}
+                    
+                    <motion.div
+                        key={centerPulseKey}
+                        initial={{ scale: 1, z: 0 }}
+                        animate={{ scale: [1, 1.02, 1], z: [0, 30, 0] }}
+                        transition={{ duration: 0.26, ease: "easeOut" }}
+                        className="absolute inset-14 rounded-full border-2 border-stone-300 bg-neutral-900/50 shadow-[0_0_28px_rgba(168,162,158,0.35)] backdrop-blur-sm z-10"
                     />
-                    <div className="absolute inset-3 rounded-full border-2 border-primary bg-primary/20 shadow-[0_0_24px_rgba(16,185,129,0.25)]" />
                 </div>
-                <p className="text-xl text-neutral-400 mb-8">Listen to the tempo...</p>
-                
-                <div className="w-64 h-1 bg-neutral-700 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-primary transition-none"
-                        style={{ width: `${progress}%` }}
-                    />
+                <div className="w-full mt-auto pb-2">
+                    <p className="mb-4 text-xl font-semibold text-white">Lock in the beat</p>
+                    <div className="relative mx-auto h-1.5 w-64 overflow-hidden rounded-full bg-white/10">
+                        <div
+                            className="h-full bg-gradient-to-r from-stone-300 to-stone-400 transition-none"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

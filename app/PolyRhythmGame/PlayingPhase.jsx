@@ -46,7 +46,7 @@ function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
             <div className="flex-1 h-full relative font-sans select-none">
                 <div 
                     ref={pointerRef}
-                    className="absolute top-0 bottom-0 w-8 bg-emerald-400 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.6)] transform -translate-x-1/2 will-change-transform"
+                    className="absolute top-0 bottom-0 w-8 bg-stone-400 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.6)] transform -translate-x-1/2 will-change-transform"
                 />
             </div>
         </div>
@@ -66,7 +66,7 @@ export default function PlayingPhase({
         return (
             <div className="w-full flex-1 flex flex-col items-center justify-center relative">
                 <div className="animate-pulse flex flex-col items-center">
-                    <p className="text-2xl font-light text-emerald-400 mb-8">Get ready...</p>
+                    <p className="text-2xl font-light text-stone-400 mb-8">Get ready...</p>
                     <div className="text-9xl font-black text-white mb-8">{count > 0 ? count : 'GO!'}</div>
                 </div>
         
@@ -90,7 +90,7 @@ export default function PlayingPhase({
     return (
         <div className="w-full max-w-2xl text-center space-y-12">
             <div className="flex flex-col items-center">
-                <p className="text-2xl font-light animate-pulse text-emerald-400">Game running... {measures} Measures</p>
+                <p className="text-2xl font-light animate-pulse text-stone-400">Game running... {measures} Measures</p>
                 <p className="text-neutral-500 text-sm mt-2 font-medium">(Press ESC to Abort)</p>
             </div>
       
@@ -105,7 +105,7 @@ export default function PlayingPhase({
                             <div 
                                 className={`w-32 h-32 rounded-full border-4 flex items-center justify-center text-4xl font-bold transition-all duration-75 
                 ${isPressed 
-                            ? 'bg-emerald-500 border-emerald-400 text-neutral-900 scale-110 shadow-[0_0_30px_rgba(52,211,153,0.6)]' 
+                            ? 'bg-stone-500 border-stone-400 text-neutral-900 scale-110 shadow-[0_0_30px_rgba(52,211,153,0.6)]' 
                             : 'bg-neutral-800 border-neutral-700 text-neutral-500'}`}
                             >
                                 {track.pulses}

@@ -14,7 +14,7 @@ export default function ResultPhase({
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up pb-12">
             <h2 className="text-3xl font-light text-neutral-400 mb-4 text-center">Your Score</h2>
-            <div className="text-8xl font-black text-emerald-400 mb-8 drop-shadow-lg text-center">
+            <div className="text-8xl font-black text-stone-400 mb-8 drop-shadow-lg text-center">
                 {score}%
             </div>
             <button 
@@ -37,7 +37,7 @@ export default function ResultPhase({
                     {!hasManualCalibration && lastAutoCorrectionMs !== 0 && (
                         <div>
                             <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
-                            <div className="text-sm font-bold text-emerald-400">
+                            <div className="text-sm font-bold text-stone-400">
                                 {lastAutoCorrectionMs > 0 ? '+' : ''}{lastAutoCorrectionMs}ms
                             </div>
                         </div>
@@ -84,7 +84,7 @@ export default function ResultPhase({
                                 <div className="relative z-20 flex flex-col gap-0.5">
                                     {Array.from({ length: totalRowsForTrack }).map((_, mIdx) => {
                                         const hitsInThisMeasure = hitsForTrack.filter(h => h.measureIndex === mIdx);
-                                        const colors = ['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-emerald-400', 'bg-purple-400'];
+                                        const colors = ['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-stone-400', 'bg-purple-400'];
                                         const colorCls = colors[mIdx % colors.length];
 
                                         return (
@@ -120,14 +120,14 @@ export default function ResultPhase({
         
                 <div className="flex flex-wrap justify-center gap-6 mt-8 p-4 bg-neutral-900/50 rounded-lg border border-neutral-800 text-xs text-neutral-400 tracking-widest">
                     {Array.from({ length: measures }).map((_, idx) => {
-                        const colors = ['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-emerald-400', 'bg-purple-400'];
+                        const colors = ['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-stone-400', 'bg-purple-400'];
                         const colorCls = colors[idx % colors.length];
                         return (
                             <span key={`legend-${idx}`} className="flex items-center gap-2"><div className={`w-4 h-2 ${colorCls} rounded-full`}></div> Bar {idx + 1}</span>
                         );
                     })}
                     <span className="flex items-center gap-2">
-                        <div className={`w-4 h-2 ${['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-emerald-400', 'bg-purple-400'][measures % 5]} rounded-full`}></div> Final Downbeat
+                        <div className={`w-4 h-2 ${['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-stone-400', 'bg-purple-400'][measures % 5]} rounded-full`}></div> Final Downbeat
                     </span>
                 </div>
             </div>

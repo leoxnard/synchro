@@ -16,7 +16,7 @@ export default function Home() {
     return (
         <div className="flex flex-col h-screen bg-neutral-900 font-sans overflow-hidden">
             <nav className="w-full flex-none">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex gap-2">
+                <div className="mx-auto px-4 py-4 flex gap-2">
                     {GAMES.map(game => (
                         <button
                             key={game.id}

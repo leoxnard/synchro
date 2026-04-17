@@ -175,7 +175,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
 
     return (
         <div className="w-full max-w-md bg-neutral-800 p-8 rounded-2xl shadow-2xl border border-neutral-700 text-center">
-            <h2 className="text-xl mb-4 font-semibold text-emerald-400">Audio Calibration</h2>
+            <h2 className="text-xl mb-4 font-semibold text-stone-400">Audio Calibration</h2>
             
             {step === 'intro' && (
                 <>
@@ -187,7 +187,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
                     </p>
                     <div className="flex gap-4 justify-center">
                         <button onClick={handleCancel} className="px-4 py-2 rounded text-neutral-400 hover:text-white transition-colors">Cancel</button>
-                        <button onClick={startCalibration} className="px-6 py-2 bg-emerald-500 text-neutral-900 font-bold rounded hover:bg-emerald-400 transition-colors">Start</button>
+                        <button onClick={startCalibration} className="px-6 py-2 bg-stone-500 text-neutral-900 font-bold rounded hover:bg-stone-400 transition-colors">Start</button>
                     </div>
                 </>
             )}
@@ -197,7 +197,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
                     <p className="text-2xl font-bold mb-4 animate-pulse">Tap the spacebar!</p>
                     <div className="w-full bg-neutral-900 h-4 rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-emerald-400 transition-all duration-200" 
+                            className="h-full bg-stone-400 transition-all duration-200" 
                             style={{ width: `${(progress / targetClicks) * 100}%` }}
                         />
                     </div>
@@ -207,7 +207,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
 
             {step === 'done' && (
                 <div className="py-8">
-                    <p className="text-2xl font-bold text-emerald-400 mb-2">Perfect!</p>
+                    <p className="text-2xl font-bold text-stone-400 mb-2">Perfect!</p>
                     <p className="text-neutral-400">Calibration saved.</p>
                 </div>
             )}
