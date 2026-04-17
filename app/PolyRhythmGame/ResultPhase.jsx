@@ -22,7 +22,6 @@ export default function ResultPhase({
                 className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm mb-8"
             >
                 Try Again
-                <span className="text-[10px] bg-neutral-700/70 px-2 py-1 rounded text-neutral-300 ml-1 tracking-widest">Enter</span>
             </button>
 
             <div className="w-full max-w-2xl p-4 mb-6 text-center">

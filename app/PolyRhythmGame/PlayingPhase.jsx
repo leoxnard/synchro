@@ -89,19 +89,12 @@ export default function PlayingPhase({
                         />
                     ))}
                 </div>
-        
-                <p className="text-neutral-500 text-xs mt-10 font-medium absolute bottom-8 tracking-wide">(Press ESC to Abort)</p>
             </div>
         );
     }
 
     return (
         <div className="w-full text-center space-y-10 flex flex-col items-center">
-            <div className="flex flex-col items-center">
-                <p className="text-xl font-light animate-pulse text-stone-300">Game running... {measures} Measures</p>
-                <p className="text-neutral-500 text-xs mt-2 font-medium tracking-wide">(Press ESC to Abort)</p>
-            </div>
-      
             <div className="w-full flex justify-center" style={{ gap: `${gapPx}px` }}>
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
