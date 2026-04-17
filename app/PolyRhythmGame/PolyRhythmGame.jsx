@@ -8,7 +8,7 @@ import LatencyTestPhase from './LatencyTestPhase';
 
 const MAX_LATENCY_COMP_MS = 2000;
 const DEFAULT_LATENCY_COMP_MS = 0; 
-const SCORE_UPLIFT_GAMMA = 0.5;
+const SCORE_UPLIFT_GAMMA = 0.6;
 const AUTO_LATENCY_SAMPLE_MAX_MS = 800;
 const MAX_AUTO_CORRECTION_MS = 600;
 const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
@@ -97,7 +97,7 @@ const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDurati
     if (sameDirectionWeight === 0) return 0;
     if (oppositeDirectionWeight > sameDirectionWeight * 0.3) return 0;
 
-    return clamp(overallMedian, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
+    return clamp(overallMedian, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
 };
 
 const estimateFallbackAutoLatencyMs = (samples) => {
@@ -113,7 +113,7 @@ const estimateFallbackAutoLatencyMs = (samples) => {
     const fallbackMedian = median(filteredDiffs);
     if (Math.abs(fallbackMedian) < MIN_FALLBACK_MEDIAN_MS) return 0;
 
-    return clamp(fallbackMedian, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
+    return clamp(fallbackMedian, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
 };
 
 const buildAutoLatencySamples = ({ expectedTaps, actualTaps }) => {
@@ -197,6 +197,7 @@ export default function PolyrhythmGame() {
     const windowTargetWidth = gameState === 'setup'
         ? '31rem'
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
+    const windowMinHeight = gameState === 'latencyTest' ? '55rem' : '30rem';
 
     const getAssignedKey = (index, total) => {
         const configs = {
@@ -470,12 +471,10 @@ export default function PolyrhythmGame() {
             detectedCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
         }
 
-        detectedCorrectionMs = clamp(detectedCorrectionMs, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
+        detectedCorrectionMs = clamp(detectedCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
 
         let residualCorrectionMs = detectedCorrectionMs - currentLatencyCompMs;
 
-        // Allow large negative residual corrections only when current offset is high,
-        // but never allow the resulting absolute offset to go below the configured minimum.
         const minResidualCorrectionMs = MIN_ALLOWED_NEGATIVE_LATENCY_MS - currentLatencyCompMs;
         residualCorrectionMs = clamp(residualCorrectionMs, minResidualCorrectionMs, MAX_AUTO_CORRECTION_MS);
 
@@ -556,7 +555,7 @@ export default function PolyrhythmGame() {
             <div 
                 className="tempo-window isolate flex flex-col w-full rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur"
                 style={{
-                    minHeight: '30rem',
+                    minHeight: windowMinHeight,
                     maxHeight: '55rem',
                     width: `min(100%, ${windowTargetWidth})`,
                     maxWidth: gameState === 'setup' ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`,
@@ -592,7 +591,6 @@ export default function PolyrhythmGame() {
 
                     {gameState === 'latencyTest' && (
                         <LatencyTestPhase
-                            bpm={bpm}
                             onClose={() => setGameState('setup')}
                         />
                     )}

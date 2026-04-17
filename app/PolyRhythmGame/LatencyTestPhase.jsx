@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const MAX_EVENTS = 320;
-const WINDOW_BEFORE_MS = 900;
-const WINDOW_AFTER_MS = 2900;
+const WINDOW_BEFORE_MS = 2000;
+const WINDOW_AFTER_MS = 2000;
 const LOOKAHEAD_SECONDS = 0.15;
 const SCHEDULE_INTERVAL_MS = 25;
+const SCHEDULE_AHEAD_SECONDS = 8;
+const BPM = 60;
+const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
 
 const formatKeyLabel = (key) => {
     if (key === ' ') return 'SPACE';
@@ -12,19 +15,41 @@ const formatKeyLabel = (key) => {
     return key.toUpperCase();
 };
 
-const round2 = (value) => Math.round(value * 100) / 100;
-
-const getNearestGridDeltaMs = (eventTimeMs, anchorTimeMs, beatIntervalMs) => {
-    if (!Number.isFinite(anchorTimeMs) || !Number.isFinite(beatIntervalMs) || beatIntervalMs <= 0) {
+const getNearestGridDeltaMs = (eventTimeMs, beatTimes, beatIntervalMs) => {
+    if (!Number.isFinite(eventTimeMs) || !Array.isArray(beatTimes) || beatTimes.length === 0) {
         return 0;
     }
 
-    const beatsFromAnchor = Math.round((eventTimeMs - anchorTimeMs) / beatIntervalMs);
-    const nearestBeatTime = anchorTimeMs + (beatsFromAnchor * beatIntervalMs);
-    return eventTimeMs - nearestBeatTime;
+    let nearestBeatTime = beatTimes[0];
+    let nearestDistance = Math.abs(eventTimeMs - nearestBeatTime);
+
+    for (let i = 1; i < beatTimes.length; i += 1) {
+        const candidate = beatTimes[i];
+        const distance = Math.abs(eventTimeMs - candidate);
+        if (distance < nearestDistance) {
+            nearestBeatTime = candidate;
+            nearestDistance = distance;
+        }
+    }
+
+    let deltaMs = eventTimeMs - nearestBeatTime;
+
+    return Math.max(MIN_ALLOWED_NEGATIVE_LATENCY_MS, deltaMs);
 };
 
-export default function LatencyTestPhase({ bpm, onClose }) {
+const getAverageColor = (value, minValue, maxValue) => {
+    if (!Number.isFinite(value)) return 'hsl(0 0% 70%)';
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue === maxValue) {
+        return 'hsl(120 70% 55%)';
+    }
+
+    const ratio = (value - minValue) / (maxValue - minValue);
+    const clampedRatio = Math.max(0, Math.min(1, ratio));
+    const hue = 120 - (clampedRatio * 120);
+    return `hsl(${hue} 80% 60%)`;
+};
+
+export default function LatencyTestPhase({ onClose }) {
     const [nowMs, setNowMs] = useState(0);
     const [inputEvents, setInputEvents] = useState([]);
     const [pressedKeyHistory, setPressedKeyHistory] = useState([]);
@@ -35,14 +60,13 @@ export default function LatencyTestPhase({ bpm, onClose }) {
     const rafRef = useRef(null);
     const nextBeatTimeRef = useRef(0);
     const beatTimesRef = useRef([]);
-    const beatGridAnchorPerfRef = useRef(null);
 
     const getAudioContextOffset = useCallback(() => {
         if (!audioCtxRef.current) return performance.now();
         return performance.now() - (audioCtxRef.current.currentTime * 1000);
     }, []);
 
-    const beatIntervalMs = useMemo(() => (60 / Math.max(1, bpm)) * 1000, [bpm]);
+    const beatIntervalMs = useMemo(() => (60 / Math.max(1, BPM)) * 1000, [BPM]);
 
     const stopAudio = useCallback(() => {
         if (schedulerRef.current) {
@@ -56,6 +80,12 @@ export default function LatencyTestPhase({ bpm, onClose }) {
         }
     }, []);
 
+    const resetTest = useCallback(() => {
+        setInputEvents([]);
+        setPressedKeyHistory([]);
+        setActiveKeys({});
+    }, []);
+
     useEffect(() => {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const ctx = new AudioContext();
@@ -63,7 +93,6 @@ export default function LatencyTestPhase({ bpm, onClose }) {
 
         const leadIn = 0.2;
         nextBeatTimeRef.current = ctx.currentTime + leadIn;
-        beatGridAnchorPerfRef.current = getAudioContextOffset() + (nextBeatTimeRef.current * 1000);
 
         const scheduleClick = (whenSeconds) => {
             if (!audioCtxRef.current) return;
@@ -80,7 +109,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
 
         schedulerRef.current = window.setInterval(() => {
             const currentAudioTime = ctx.currentTime;
-            while (nextBeatTimeRef.current < currentAudioTime + LOOKAHEAD_SECONDS) {
+            while (nextBeatTimeRef.current < currentAudioTime + SCHEDULE_AHEAD_SECONDS) {
                 const beatPerfMs = getAudioContextOffset() + (nextBeatTimeRef.current * 1000);
                 beatTimesRef.current.push(beatPerfMs);
                 if (beatTimesRef.current.length > MAX_EVENTS) {
@@ -119,6 +148,12 @@ export default function LatencyTestPhase({ bpm, onClose }) {
                 return;
             }
 
+            if (event.key === 'Backspace') {
+                event.preventDefault();
+                resetTest();
+                return;
+            }
+
             const key = event.key.toLowerCase();
             if (key === ' ') event.preventDefault();
 
@@ -127,7 +162,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
             const eventTime = performance.now();
             const deltaToBeat = getNearestGridDeltaMs(
                 eventTime,
-                beatGridAnchorPerfRef.current,
+                beatTimesRef.current,
                 beatIntervalMs
             );
 
@@ -163,14 +198,14 @@ export default function LatencyTestPhase({ bpm, onClose }) {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, [beatIntervalMs, onClose]);
+    }, [beatIntervalMs, onClose, resetTest]);
 
     const beatMarkers = useMemo(() => {
-        const range = WINDOW_BEFORE_MS + WINDOW_AFTER_MS;
+        const timelineSpanMs = Math.max(WINDOW_BEFORE_MS, WINDOW_AFTER_MS);
         return beatTimesRef.current
             .map((time, index) => {
-                const relative = time - (nowMs - WINDOW_BEFORE_MS);
-                const x = (relative / range) * 100;
+                const deltaMs = time - nowMs;
+                const x = 50 + ((deltaMs / Math.max(1, timelineSpanMs)) * 50);
                 return {
                     id: `b-${index}-${time}`,
                     x
@@ -180,11 +215,11 @@ export default function LatencyTestPhase({ bpm, onClose }) {
     }, [nowMs]);
 
     const inputMarkers = useMemo(() => {
-        const range = WINDOW_BEFORE_MS + WINDOW_AFTER_MS;
+        const timelineSpanMs = Math.max(WINDOW_BEFORE_MS, WINDOW_AFTER_MS);
         return inputEvents
             .map((entry) => {
-                const relative = entry.time - (nowMs - WINDOW_BEFORE_MS);
-                const x = (relative / range) * 100;
+                const deltaMs = entry.time - nowMs;
+                const x = 50 + ((deltaMs / Math.max(1, timelineSpanMs)) * 50);
                 return {
                     ...entry,
                     x
@@ -204,33 +239,46 @@ export default function LatencyTestPhase({ bpm, onClose }) {
 
         return Array.from(byKey.entries())
             .map(([key, deltas]) => {
-                const avg = deltas.reduce((sum, value) => sum + value, 0) / deltas.length;
-                const absAvg = deltas.reduce((sum, value) => sum + Math.abs(value), 0) / deltas.length;
+                const avg = deltas.slice(-20).reduce((sum, value) => sum + value, 0) / deltas.length;
                 return {
                     key,
                     count: deltas.length,
                     avg,
-                    absAvg
                 };
             })
             .sort((a, b) => b.count - a.count);
     }, [inputEvents]);
 
+    const avgRange = useMemo(() => {
+        if (perKeyStats.length === 0) {
+            return { minAvg: 0, maxAvg: 0 };
+        }
+
+        return {
+            minAvg: Math.min(...perKeyStats.map((item) => item.avg)),
+            maxAvg: Math.max(...perKeyStats.map((item) => item.avg))
+        };
+    }, [perKeyStats]);
+
     const recentEvents = useMemo(
-        () => inputEvents.slice(-10).reverse(),
+        () => inputEvents.slice().reverse(),
         [inputEvents]
     );
 
     return (
-        <div className="w-full max-w-5xl p-2 text-center flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
+        <div className="w-full max-w-5xl self-stretch flex-1 h-full min-h-0 overflow-hidden p-2 text-center flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3 shrink-0">
                 <div className="text-left">
                     <h2 className="text-lg font-semibold text-stone-200 tracking-wide">Input Lag Test</h2>
-                    <p className="text-xs text-neutral-400 mt-1">
-                        Metronome @ {Math.round(bpm)} BPM. Lines move from right to left. Beat lines are gray, input lines are cyan.
-                    </p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={resetTest}
+                        className="px-4 py-2 rounded-full border border-white/15 text-neutral-300 text-xs font-semibold tracking-wide hover:text-white hover:bg-white/[0.06] transition-colors"
+                    >
+                        Reset
+                    </button>
                     <button
                         type="button"
                         onClick={onClose}
@@ -241,10 +289,10 @@ export default function LatencyTestPhase({ bpm, onClose }) {
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-3">
+            <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-3 shrink-0">
                 <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-neutral-900/80 to-neutral-950">
                     <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:8%_100%] opacity-30" />
-                    <div className="absolute top-0 bottom-0 left-[23.6842105263%] w-[2px] bg-amber-200/90" />
+                    <div className="absolute top-0 bottom-0 left-1/2 w-[2px] -translate-x-1/2 bg-amber-200/90" />
 
                     {beatMarkers.map((marker) => (
                         <div
@@ -270,7 +318,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left shrink-0">
                 <div className="rounded-xl border border-white/10 bg-neutral-900/55 p-3">
                     <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Pressed Keys (Session)</div>
                     <div className="flex flex-wrap gap-2 min-h-10">
@@ -302,36 +350,33 @@ export default function LatencyTestPhase({ bpm, onClose }) {
                             <div className="text-sm text-neutral-500">No measurements yet.</div>
                         )}
                         {perKeyStats.map((item) => (
-                            <div key={item.key} className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 text-xs text-neutral-300">
+                            <div key={item.key} className="flex items-center justify-between gap-3 text-xs text-neutral-300">
                                 <span className="font-semibold text-stone-200">{formatKeyLabel(item.key)} ({item.count}x)</span>
-                                <span>avg: {round2(item.avg)}ms</span>
-                                <span>abs: {round2(item.absAvg)}ms</span>
+                                <span className="shrink-0 whitespace-nowrap" style={{ color: getAverageColor(item.avg, avgRange.minAvg, avgRange.maxAvg) }}>
+                                    avg: {item.avg.toFixed(0)}ms
+                                </span>
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-neutral-900/55 p-3 text-left">
+            <div className="rounded-xl border border-white/10 bg-neutral-900/55 p-3 text-left flex flex-col flex-1 basis-0 min-h-0 overflow-hidden">
                 <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Recent Inputs</div>
-                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                <div className="space-y-1 flex-1 min-h-0 overflow-hidden pr-1">
                     {recentEvents.length === 0 && (
                         <div className="text-sm text-neutral-500">No inputs captured.</div>
                     )}
                     {recentEvents.map((entry) => (
                         <div key={entry.id} className="text-xs text-neutral-300 flex justify-between gap-2">
                             <span className="font-semibold text-stone-200">{formatKeyLabel(entry.key)}</span>
-                            <span className={entry.deltaToBeat > 0 ? 'text-amber-300' : 'text-cyan-300'}>
+                            <span className={entry.deltaToBeat > 0 ? 'text-neutral-300' : 'text-cyan-300'}>
                                 {entry.deltaToBeat > 0 ? '+' : ''}{Math.round(entry.deltaToBeat)}ms
                             </span>
                         </div>
                     ))}
                 </div>
             </div>
-
-            <p className="text-xs text-neutral-500 text-left">
-                ESC closes the test immediately. Positive values mean after the beat (late). Negative values mean before the beat (early).
-            </p>
         </div>
     );
 }
