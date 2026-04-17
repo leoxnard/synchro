@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 function ChevronIcon({ direction }) {
     const points = direction === 'up' ? '6 9 12 3 18 9' : '6 7 12 13 18 7';
@@ -87,130 +87,85 @@ export default function SetupPhase({
     beatsPerMeasure,
     setBeatsPerMeasure
 }) {
-    const [showCalibrationMenu, setShowCalibrationMenu] = useState(false);
-    const calibrationMenuRef = useRef(null);
-
-    useEffect(() => {
-        const handlePointerDown = (event) => {
-            if (!calibrationMenuRef.current) return;
-            if (!calibrationMenuRef.current.contains(event.target)) {
-                setShowCalibrationMenu(false);
-            }
-        };
-
-        window.addEventListener('pointerdown', handlePointerDown);
-        return () => window.removeEventListener('pointerdown', handlePointerDown);
-    }, []);
-
     return (
-        <div className="w-full max-w-md p-1 relative flex flex-col">
-            <div className="absolute -top-3 right-4" ref={calibrationMenuRef}>
-                <button
-                    type="button"
-                    onClick={() => setShowCalibrationMenu((prev) => !prev)}
-                    aria-label="Calibration options"
-                    title="Calibration options"
-                    className="h-9 w-9 rounded-full border border-neutral-600 bg-neutral-900/90 text-neutral-400 hover:text-white hover:border-neutral-500 transition-colors flex items-center justify-center"
-                >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                        <path
-                            fill="currentColor"
-                            d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3zm15 7v2h3v-2h-3zm-4 0v2h3v-2h-3zm0 5v2h3v-2h-3zm4 0v2h3v-2h-3z"
-                        />
-                    </svg>
-                </button>
-
-                {showCalibrationMenu && (
-                    <div className="absolute z-20 right-0 mt-2 w-44 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden">
+        <div className="w-full h-full relative flex flex-col p-1">
+            <div className="w-full relative flex flex-col flex-1 pb-16">
+                <span className="text-2xl font-light text-neutral-400 mb-3 text-center tracking-wide border-b border-white/10 pb-2">Polyrhythm</span>
+                <div className="mb-5 pb-3 border-b border-white/10">
+                    <div className="flex items-center justify-between gap-3 text-xs text-neutral-400">
+                        <div className="flex gap-4 justify-center">
+                            <div className="flex flex-col items-center">
+                                <span className="text-neutral-500 mb-1">Audio Offset</span>
+                                <span className={`font-bold ${latencyCompMs !== 0 ? (hasManualCalibration ? 'text-cyan-300' : 'text-amber-300') : 'text-neutral-400'}`}>
+                                    {latencyCompMs > 0 ? '+' : ''}{latencyCompMs}ms
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-neutral-500 mb-1">Calibration</span>
+                                <span className={`font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-neutral-400'}`}>
+                                    {hasManualCalibration ? 'Manual' : 'Auto'}
+                                </span>
+                            </div>
+                        </div>
                         <button
                             type="button"
-                            onClick={() => {
-                                setShowCalibrationMenu(false);
-                                onForceCalibrate();
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+                            onClick={hasManualCalibration ? onResetCalibration : onForceCalibrate}
+                            className="shrink-0 px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
                         >
-                            Run Calibration
+                            {hasManualCalibration ? 'Clear Calibration' : 'Run Calibration'}
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowCalibrationMenu(false);
-                                onResetCalibration();
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors border-t border-neutral-800"
-                        >
-                            Reset to Default
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div className="mb-5 pb-3 border-b border-white/10">
-                <div className="flex gap-4 justify-center text-xs text-neutral-400">
-                    <div className="flex flex-col items-center">
-                        <span className="text-neutral-500 mb-1">Audio Offset</span>
-                        <span className={`font-bold ${latencyCompMs !== 0 ? (hasManualCalibration ? 'text-cyan-300' : 'text-amber-300') : 'text-neutral-400'}`}>
-                            {latencyCompMs > 0 ? '+' : ''}{latencyCompMs}ms
-                        </span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-neutral-500 mb-1">Calibration</span>
-                        <span className={`font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-neutral-400'}`}>
-                            {hasManualCalibration ? 'Manual' : 'Auto'}
-                        </span>
                     </div>
                 </div>
-            </div>
       
-            <div className="flex gap-3 mb-5 pb-5 border-b border-white/10">
-                <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} className="flex-1" />
-                <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} className="flex-1" />
-                <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} className="flex-1" />
-            </div>
+                <div className="flex gap-3 mb-5 pb-5 border-b border-white/10">
+                    <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} className="flex-1" />
+                    <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} className="flex-1" />
+                    <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} className="flex-1" />
+                </div>
       
-            <div className="space-y-3 mb-5">
-                {tracks.map(track => {
-                    const assignedKey = track.key || '';
-                    const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
+                <div className="space-y-3 mb-5 flex-1">
+                    {tracks.map(track => {
+                        const assignedKey = track.key || '';
+                        const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
           
-                    return (
-                        <div key={track.id} className="flex items-center gap-4">
-                            <div className="flex-1 p-1 flex items-center justify-between transition-colors">
-                                <div className="w-20">
-                                    <NumberStepper
-                                        value={track.pulses}
-                                        onChange={(nextValue) => updateTrack(track.id, 'pulses', nextValue)}
-                                        min={1}
-                                        max={16}
-                                    />
+                        return (
+                            <div key={track.id} className="flex items-center gap-4">
+                                <div className="flex-1 p-1 flex items-center justify-between transition-colors">
+                                    <div className="w-20">
+                                        <NumberStepper
+                                            value={track.pulses}
+                                            onChange={(nextValue) => updateTrack(track.id, 'pulses', nextValue)}
+                                            min={1}
+                                            max={16}
+                                        />
+                                    </div>
+                                    <span className="text-neutral-500">Beats</span>
                                 </div>
-                                <span className="text-neutral-500">Beats</span>
-                            </div>
-                            <span className="text-lg font-bold text-neutral-600">on</span>
+                                <span className="text-lg font-bold text-neutral-600">on</span>
             
-                            <div 
-                                className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                    e.preventDefault();
-                                    updateTrack(track.id, 'key', e.key.toLowerCase());
-                                }}
-                            >
-                                <span className="text-lg font-bold text-stone-300 uppercase tracking-widest">{displayKey}</span>
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                <div 
+                                    className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        e.preventDefault();
+                                        updateTrack(track.id, 'key', e.key.toLowerCase());
+                                    }}
+                                >
+                                    <span className="text-lg font-bold text-stone-300 uppercase tracking-widest">{displayKey}</span>
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                                     Click & Press Key
+                                    </div>
                                 </div>
-                            </div>
 
-                            {tracks.length > 1 && (
-                                <button onClick={() => removeTrack(track.id)} className="text-rose-400 hover:text-rose-300 p-2 font-bold w-6 shrink-0">✕</button>
-                            )}
-                        </div>
-                    )})}
+                                {tracks.length > 1 && (
+                                    <button onClick={() => removeTrack(track.id)} className="text-stone-400 hover:text-stone-300 p-2 font-bold w-6 shrink-0">✕</button>
+                                )}
+                            </div>
+                        )})}
+                </div>
             </div>
 
-            <div className="flex justify-between mt-6">
+            <div className="absolute bottom-1 left-1 right-1 flex justify-between items-center">
                 {tracks.length < 5 ? (
                     <button 
                         onClick={addTrack}

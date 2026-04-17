@@ -4,7 +4,7 @@ import PolyRhythmGame from "./PolyRhythmGame/PolyRhythmGame";
 import TempoRecognitionGame from "./TempoRecognitionGame/TempoRecognitionGame";
 
 const GAMES = [
-    { id: "poly-rhythm", label: "Poly Rhythm", component: PolyRhythmGame },
+    { id: "poly-rhythm", label: "Polyrhythm", component: PolyRhythmGame },
     { id: "tempo-recognition", label: "Tempo Recognition", component: TempoRecognitionGame },
 ];
 

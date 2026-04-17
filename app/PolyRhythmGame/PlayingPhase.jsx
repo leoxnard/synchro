@@ -62,6 +62,14 @@ export default function PlayingPhase({
     measureDuration,
     measures
 }) {
+    const trackCount = tracks.length;
+    const extraTracks = Math.max(0, trackCount - 3);
+    const circleSizePx = Math.max(92, 112 - (extraTracks * 10));
+    const gapPx = Math.max(24, 40 - (extraTracks * 8));
+    const pulseFontSizePx = Math.max(24, Math.round(circleSizePx * 0.27));
+    const labelFontSizePx = Math.max(14, 18 - (extraTracks * 1.5));
+    const labelPadXPx = Math.max(10, 16 - (extraTracks * 2));
+
     if (gameState === 'countIn') {
         return (
             <div className="w-full flex-1 flex flex-col items-center justify-center relative">
@@ -88,13 +96,13 @@ export default function PlayingPhase({
     }
 
     return (
-        <div className="w-full max-w-2xl text-center space-y-10 flex flex-col items-center">
+        <div className="w-full text-center space-y-10 flex flex-col items-center">
             <div className="flex flex-col items-center">
                 <p className="text-xl font-light animate-pulse text-stone-300">Game running... {measures} Measures</p>
                 <p className="text-neutral-500 text-xs mt-2 font-medium tracking-wide">(Press ESC to Abort)</p>
             </div>
       
-            <div className="flex justify-center gap-10">
+            <div className="w-full flex justify-center" style={{ gap: `${gapPx}px` }}>
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
@@ -103,14 +111,25 @@ export default function PlayingPhase({
                     return (
                         <div key={track.id} className="flex flex-col items-center gap-4">
                             <div 
-                                className={`w-28 h-28 rounded-full border-4 flex items-center justify-center text-3xl font-bold transition-all duration-75 
+                                className={`rounded-full border-4 flex items-center justify-center font-bold transition-all duration-75 
                 ${isPressed 
-                            ? 'bg-stone-300 border-stone-200 text-neutral-900 scale-110 shadow-[0_0_26px_rgba(214,211,209,0.45)]' 
+                            ? 'bg-stone-300 border-stone-200 text-neutral-900 scale-105 shadow-[0_0_26px_rgba(214,211,209,0.45)]' 
                             : 'bg-white/[0.03] border-white/10 text-neutral-500'}`}
+                                style={{
+                                    width: `${circleSizePx}px`,
+                                    height: `${circleSizePx}px`,
+                                    fontSize: `${pulseFontSizePx}px`
+                                }}
                             >
                                 {track.pulses}
                             </div>
-                            <div className="text-lg font-bold px-4 py-1.5 bg-white/[0.03] rounded-lg text-neutral-400 border border-white/10">
+                            <div
+                                className="font-bold bg-white/[0.03] rounded-lg text-neutral-400 border border-white/10"
+                                style={{
+                                    fontSize: `${labelFontSizePx}px`,
+                                    padding: `0.375rem ${labelPadXPx}px`
+                                }}
+                            >
                                 {displayKey}
                             </div>
                         </div>

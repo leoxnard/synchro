@@ -102,6 +102,15 @@ export default function PolyrhythmGame() {
     const [lastAutoCorrectionMs, setLastAutoCorrectionMs] = useState(0);
 
     const measureDuration = (60 / bpm) * beatsPerMeasure * 1000;
+    const extraTracks = Math.max(0, tracks.length - 3);
+    const circleSizePx = Math.max(92, 112 - (extraTracks * 10));
+    const gapPx = Math.max(24, 40 - (extraTracks * 8));
+    const playingRowWidthPx = (tracks.length * circleSizePx) + (Math.max(0, tracks.length - 1) * gapPx);
+    const inGameWidthRem = Math.max(31, (playingRowWidthPx + 84) / 16);
+    const clampedInGameWidthRem = Math.min(inGameWidthRem, 46);
+    const windowTargetWidth = gameState === 'setup'
+        ? '31rem'
+        : `${clampedInGameWidthRem.toFixed(2)}rem`;
 
     const getAssignedKey = (index, total) => {
         const configs = {
@@ -446,12 +455,14 @@ export default function PolyrhythmGame() {
     });
 
     return (
-        <div className="w-full px-4 py-4 text-neutral-100 font-sans">
+        <div className="w-full px-4 py-4 text-neutral-100 font-sans flex items-center justify-center">
             <div 
-                className="tempo-window isolate flex flex-col mx-auto w-full max-w-md rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur"
+                className="tempo-window isolate flex flex-col w-full rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur"
                 style={{
                     minHeight: '30rem',
                     maxHeight: '55rem',
+                    width: `min(100%, ${windowTargetWidth})`,
+                    maxWidth: gameState === 'setup' ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`,
                     transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
             >
