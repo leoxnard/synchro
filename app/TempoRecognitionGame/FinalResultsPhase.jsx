@@ -1,7 +1,7 @@
 import React from 'react';
 import { SlReload } from "react-icons/sl";
 
-export default function FinalResultsPhase({ scores, onRestart }) {
+export default function FinalResultsPhase({ scores, highscore, isNewHighscore, onRestart }) {
     const totalScore = scores.reduce((sum, score) => sum + score, 0);
     const averageScore = scores.length > 0 ? Math.round(totalScore / scores.length) : 0;
 
@@ -12,11 +12,18 @@ export default function FinalResultsPhase({ scores, onRestart }) {
                 <div className="w-full max-w-xl text-center px-2 md:px-3 flex flex-col gap-4">
 
                     <div className="mb-1 text-xs uppercase tracking-[0.22em] text-neutral-500">Total Score</div>
-                    <div className="mb-6 text-6xl font-black text-stone-200 md:text-8xl">
+                    <div className="mb-2 text-6xl font-black text-stone-200 md:text-8xl">
                         {(Math.round(totalScore)/10).toFixed(1)}
                     </div>
 
-                    <p className="mb-7 text-md text-neutral-300">Average accuracy: <span className="font-semibold text-stone-200">{(averageScore/10).toFixed(1)}</span></p>
+                    {isNewHighscore && (
+                        <div className="text-sm font-bold text-amber-400 mb-2 animate-pulse">NEW HIGHSCORE</div>
+                    )}
+                    {!isNewHighscore && highscore > 0 && (
+                        <div className="text-xs text-neutral-500 mb-4">Highscore: {(Math.round(highscore)/10).toFixed(1)}</div>
+                    )}
+
+                    <p className="mb-4 text-md text-neutral-300">Average accuracy: <span className="font-semibold text-stone-200">{(averageScore/10).toFixed(1)}</span></p>
 
                     <div className="mb-7 grid grid-cols-5 gap-2">
                         {scores.map((score, idx) => (

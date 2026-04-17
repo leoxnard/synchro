@@ -6,6 +6,7 @@ import ListeningPhase from './ListeningPhase';
 import AdjustmentPhase from './AdjustmentPhase';
 import RoundResultsPhase from './RoundResultsPhase';
 import FinalResultsPhase from './FinalResultsPhase';
+import { getHighscore, saveHighscore } from '../lib/highscoreStorage';
 
 const MIN_TEMPO = 40;
 const MAX_TEMPO = 240;
@@ -19,6 +20,12 @@ export default function TempoRecognitionGame() {
     const [lastGuessTempo, setLastGuessTempo] = useState(0);
     const [scores, setScores] = useState([]);
     const [audioCtx, setAudioCtx] = useState(null);
+    const [highscore] = useState(() => getHighscore('tempo-recognition'));
+
+    // Derived state: check if this session is a new highscore
+    const currentSessionTotal = scores.length === TOTAL_ROUNDS ? scores.reduce((sum, score) => sum + score, 0) : 0;
+    const isNewHighscoreFlag = gameState === 'final-results' && currentSessionTotal > highscore;
+
 
     const generateTargetTempo = () => {
         return Math.floor(Math.random() * (MAX_TEMPO - MIN_TEMPO + 1)) + MIN_TEMPO;
@@ -76,6 +83,13 @@ export default function TempoRecognitionGame() {
         setCurrentTempo(0);
         setLastGuessTempo(0);
     };
+
+    useEffect(() => {
+        if (gameState === 'final-results' && scores.length === TOTAL_ROUNDS) {
+            const totalScore = scores.reduce((sum, score) => sum + score, 0);
+            saveHighscore('tempo-recognition', totalScore);
+        }
+    }, [gameState, scores]);
 
     useEffect(() => {
         return () => {
@@ -161,6 +175,8 @@ export default function TempoRecognitionGame() {
                     {gameState === 'final-results' && (
                         <FinalResultsPhase
                             scores={scores}
+                            highscore={highscore}
+                            isNewHighscore={isNewHighscoreFlag}
                             onRestart={restartGame}
                         />
                     )}
