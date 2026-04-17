@@ -14,7 +14,7 @@ export default function ResultPhase({
         <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up overflow-y-auto pr-1">
             <h2 className="text-2xl font-light text-neutral-400 mb-3 text-center tracking-wide">Your Score</h2>
             <div className="text-7xl font-black text-stone-300 mb-6 drop-shadow-lg text-center">
-                {score}%
+                {score.toFixed(1)}
             </div>
             <button 
                 onClick={onTryAgain}

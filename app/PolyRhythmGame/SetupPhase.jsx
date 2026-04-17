@@ -145,7 +145,7 @@ export default function SetupPhase({
                 <div className="space-y-3 mb-5 flex-1">
                     {tracks.map(track => {
                         const assignedKey = track.key || '';
-                        const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
+                        const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
 
                         return (
                             <div key={track.id} className="flex items-center gap-4">

@@ -8,7 +8,6 @@ import LatencyTestPhase from './LatencyTestPhase';
 
 const MAX_LATENCY_COMP_MS = 2000;
 const DEFAULT_LATENCY_COMP_MS = 0; 
-const SCORE_UPLIFT_GAMMA = 0.6;
 const AUTO_LATENCY_SAMPLE_MAX_MS = 800;
 const MAX_AUTO_CORRECTION_MS = 600;
 const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
@@ -183,8 +182,8 @@ export default function PolyrhythmGame() {
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
     const [countInBars, setCountInBars] = useState(1);
     const [tracks, setTracks] = useState([
-        { id: 1, pulses: 3, key: 'shift' },
-        { id: 2, pulses: 4 , key: ' ' }
+        { id: 1, pulses: 4, key: 'shift' },
+        { id: 2, pulses: 3 , key: ' ' }
     ]);
     const [score, setScore] = useState(0);
     const [activeKeys, setActiveKeys] = useState({});
@@ -582,10 +581,20 @@ export default function PolyrhythmGame() {
             ? 100 - ((scoring.totalDeviation / scoring.maxAllowedDeviation) * 100)
             : 0;
 
-        const normalizedRawScore = clamp(rawPercentage / 100, 0, 1);
-        const upliftedPercentage = Math.pow(normalizedRawScore, SCORE_UPLIFT_GAMMA) * 100;
+        const x = clamp(rawPercentage / 100, 0, 1);
 
-        setScore(Math.max(0, Math.round(upliftedPercentage)));
+        const alpha = 1.9; // steepness of the curve
+        const k = 0.7; // intercept point on linear scale
+
+        let curveValue = 0;
+        if (x < k) {
+            curveValue = k * Math.pow(x / k, alpha);
+        } else {
+            curveValue = 1 - (1 - k) * Math.pow((1 - x) / (1 - k), alpha);
+        }
+        const finalScore = curveValue * 10;
+
+        setScore(Math.max(0, finalScore.toFixed(1)));
     };
 
     useEffect(() => {
