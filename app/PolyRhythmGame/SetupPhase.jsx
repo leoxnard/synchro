@@ -27,10 +27,17 @@ function NumberStepper({
     compact = false,
     className = ''
 }) {
+    const clampValue = (rawValue) => {
+        const numericValue = Number(rawValue);
+        if (!Number.isFinite(numericValue)) {
+            return min;
+        }
+        return Math.min(max, Math.max(min, numericValue));
+    };
+
     const handleStep = (direction) => {
         const nextValue = Number(value) + (direction * step);
-        const clampedValue = Math.min(max, Math.max(min, nextValue));
-        onChange(clampedValue);
+        onChange(clampValue(nextValue));
     };
 
     return (
@@ -47,7 +54,12 @@ function NumberStepper({
                     max={max}
                     step={step}
                     value={value}
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    onChange={(e) => {
+                        const rawValue = e.target.value;
+                        if (rawValue === '') return;
+                        onChange(clampValue(rawValue));
+                    }}
+                    onBlur={() => onChange(clampValue(value))}
                     className={`w-full bg-neutral-900 rounded-lg pl-6 border border-neutral-700 focus:border-stone-400 focus:outline-none transition-colors font-bold text-center appearance-none ${compact ? 'h-9 px-2 pr-8 text-base' : 'h-11 px-3 pr-10 text-lg'}`}
                 />
                 <div className="absolute right-1 top-1 bottom-1 aspect-[1/2] flex flex-col rounded-md overflow-hidden border border-neutral-700 bg-neutral-800/80">
@@ -122,8 +134,7 @@ export default function SetupPhase({
                 </div>
 
                 <div
-                    className="grid gap-2 mb-5 pb-5 border-b border-white/10 items-end"
-                    style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+                    className="flex gap-2 mb-5 pb-5 border-b border-white/10 items-end justify-end"
                 >
                     <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} />
                     <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} />

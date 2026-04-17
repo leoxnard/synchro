@@ -15,8 +15,13 @@ const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
 const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
 const END_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS + 100;
 const END_TAP_BASE_BUFFER_MS = 220;
+const BEAT_ACCENT_TONE_HZ = 1175;
+const BEAT_PULSE_TONE_HZ = 988;
+const RHYTHM_TONES_HZ = [880, 740, 659, 587, 523];
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const getRhythmToneHz = (trackIndex) => RHYTHM_TONES_HZ[trackIndex] || RHYTHM_TONES_HZ[RHYTHM_TONES_HZ.length - 1];
 
 const median = (values) => {
     if (values.length === 0) return 0;
@@ -178,8 +183,8 @@ export default function PolyrhythmGame() {
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
     const [countInBars, setCountInBars] = useState(1);
     const [tracks, setTracks] = useState([
-        { id: 1, pulses: 4, key: 'shift' },
-        { id: 2, pulses: 3, key: ' ' }
+        { id: 1, pulses: 3, key: 'shift' },
+        { id: 2, pulses: 4 , key: ' ' }
     ]);
     const [score, setScore] = useState(0);
     const [activeKeys, setActiveKeys] = useState({});
@@ -272,7 +277,7 @@ export default function PolyrhythmGame() {
     const scheduleDedupedClickEvents = (events) => {
         if (!Array.isArray(events) || events.length === 0) return;
 
-        const CLICK_DEDUP_EPSILON_MS = 6;
+        const CLICK_DEDUP_EPSILON_MS = 12;
         const sorted = [...events].sort((a, b) => a.time - b.time);
         const deduped = [];
 
@@ -289,7 +294,7 @@ export default function PolyrhythmGame() {
                 return;
             }
 
-            if ((event.priority || 0) > (last.priority || 0)) {
+            if ((event.rank ?? Number.MAX_SAFE_INTEGER) < (last.rank ?? Number.MAX_SAFE_INTEGER)) {
                 deduped[deduped.length - 1] = event;
             }
         });
@@ -370,8 +375,12 @@ export default function PolyrhythmGame() {
         // Base beat track in count-in and playing phase.
         for (let b = 0; b < countInTotalBeats; b++) {
             const time = now + ((b * beatDurationMs) / 1000);
-            const isCountInAccent = (b % Math.max(1, beatsPerMeasure)) === 0;
-            clickEvents.push({ time, freq: isCountInAccent ? 1200 : 1000, priority: 2 });
+            const isBarStart = (b % Math.max(1, beatsPerMeasure)) === 0;
+            clickEvents.push({
+                time,
+                freq: isBarStart ? BEAT_ACCENT_TONE_HZ : BEAT_PULSE_TONE_HZ,
+                rank: 0
+            });
         }
 
         for (let b = 0; b < countInTotalBeats; b++) {
@@ -388,29 +397,32 @@ export default function PolyrhythmGame() {
 
         tracks.forEach((track, trackIndex) => {
             const pulseDurationSecs = measureDurationSecs / Math.max(1, track.pulses);
-            const accentFreq = [1200, 1120, 1040, 980, 920][trackIndex] || 1200;
-            const pulseFreq = [980, 860, 760, 680, 620][trackIndex] || 980;
+            const rhythmToneHz = getRhythmToneHz(trackIndex);
+            const rank = trackIndex + 1;
 
             for (let m = 0; m < countInRhythmBars; m += 1) {
                 for (let p = 0; p < track.pulses; p += 1) {
                     const time = now + (m * measureDurationSecs) + (p * pulseDurationSecs);
-                    clickEvents.push({ time, freq: p === 0 ? accentFreq : pulseFreq, priority: 1 });
+                    clickEvents.push({ time, freq: rhythmToneHz, rank });
                 }
             }
         });
 
         for (let m = 0; m < measures; m += 1) {
             for (let p = 0; p < beatsPerMeasure; p += 1) {
-                const isMeasureStart = p === 0;
                 const time = now + countInDurationSecs + m * measureDurationSecs + (p / beatsPerMeasure) * measureDurationSecs;
-                clickEvents.push({ time, freq: isMeasureStart ? 1200 : 1000, priority: 2 });
+                clickEvents.push({
+                    time,
+                    freq: p === 0 ? BEAT_ACCENT_TONE_HZ : BEAT_PULSE_TONE_HZ,
+                    rank: 0
+                });
             }
         }
 
         clickEvents.push({
             time: now + countInDurationSecs + (measures * measureDurationSecs),
-            freq: 1200,
-            priority: 2
+            freq: BEAT_ACCENT_TONE_HZ,
+            rank: 0
         });
 
         scheduleDedupedClickEvents(clickEvents);

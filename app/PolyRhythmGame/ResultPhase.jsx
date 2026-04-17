@@ -24,12 +24,7 @@ export default function ResultPhase({
             </button>
 
             <div className="w-full max-w-2xl p-4 mb-6 text-center">
-                <div className="text-sm text-neutral-400 mb-3">Audio Correction</div>
                 <div className="flex gap-6 justify-center">
-                    <div>
-                        <div className="text-xs text-neutral-500 mb-1">Calibration Mode</div>
-                        <div className="text-sm font-bold text-amber-300">Auto-Detect</div>
-                    </div>
                     {lastAutoCorrectionMs !== 0 && (
                         <div>
                             <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
