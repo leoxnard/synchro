@@ -12,32 +12,32 @@ export default function ResultPhase({
     setGameState
 }) {
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up pb-12">
-            <h2 className="text-3xl font-light text-neutral-400 mb-4 text-center">Your Score</h2>
-            <div className="text-8xl font-black text-stone-400 mb-8 drop-shadow-lg text-center">
+        <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up overflow-y-auto pr-1">
+            <h2 className="text-2xl font-light text-neutral-400 mb-3 text-center tracking-wide">Your Score</h2>
+            <div className="text-7xl font-black text-stone-300 mb-6 drop-shadow-lg text-center">
                 {score}%
             </div>
             <button 
                 onClick={() => setGameState('setup')}
-                className="px-8 py-3 flex items-center gap-2 rounded-lg bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 transition-colors font-medium text-lg mb-12"
+                className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm mb-8"
             >
                 Try Again
-                <span className="text-xs bg-neutral-700 px-2 py-1 rounded text-neutral-300 ml-1 tracking-widest">Enter</span>
+                <span className="text-[10px] bg-neutral-700/70 px-2 py-1 rounded text-neutral-300 ml-1 tracking-widest">Enter</span>
             </button>
 
-            <div className="w-full max-w-2xl bg-neutral-800/50 border border-neutral-700 rounded-lg p-4 mb-8 text-center">
+            <div className="w-full max-w-2xl p-4 mb-6 text-center">
                 <div className="text-sm text-neutral-400 mb-3">Audio Correction</div>
                 <div className="flex gap-6 justify-center">
                     <div>
                         <div className="text-xs text-neutral-500 mb-1">Calibration Mode</div>
-                        <div className={`text-sm font-bold ${hasManualCalibration ? 'text-blue-400' : 'text-amber-400'}`}>
+                        <div className={`text-sm font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-amber-300'}`}>
                             {hasManualCalibration ? 'Manual' : 'Auto-Detect'}
                         </div>
                     </div>
                     {!hasManualCalibration && lastAutoCorrectionMs !== 0 && (
                         <div>
                             <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
-                            <div className="text-sm font-bold text-stone-400">
+                            <div className="text-sm font-bold text-stone-300">
                                 {lastAutoCorrectionMs > 0 ? '+' : ''}{lastAutoCorrectionMs}ms
                             </div>
                         </div>
@@ -52,7 +52,7 @@ export default function ResultPhase({
             </div>
       
             {/* VISUALIZATION */}
-            <div className="w-full space-y-5 bg-neutral-800/50 p-5 rounded-2xl border border-neutral-700/50">
+            <div className="w-full space-y-4 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
@@ -63,8 +63,8 @@ export default function ResultPhase({
                     const totalRowsForTrack = measures + 1;
 
                     return (
-                        <div key={track.id} className="relative bg-neutral-900/50 rounded-lg border border-neutral-700 mt-6 overflow-visible px-6 py-4">
-                            <div className="absolute -top-3 left-4 px-2 bg-neutral-800 text-xs font-bold text-neutral-400 rounded border border-neutral-700 z-30">
+                        <div key={track.id} className="relative bg-neutral-900/35 rounded-lg border border-white/10 mt-5 overflow-visible px-5 py-3">
+                            <div className="absolute -top-3 left-4 px-2 bg-neutral-900 text-xs font-bold text-neutral-400 rounded border border-white/10 z-30">
                                 Key &apos;{displayKey}&apos; ({track.pulses} Beats)
                             </div>
                
@@ -88,7 +88,7 @@ export default function ResultPhase({
                                         const colorCls = colors[mIdx % colors.length];
 
                                         return (
-                                            <div key={`m-${mIdx}`} className="relative h-4 w-full bg-neutral-800/40 rounded-sm overflow-visible">
+                                            <div key={`m-${mIdx}`} className="relative h-3.5 w-full bg-white/[0.04] rounded-sm overflow-visible">
                                                 {/* Die echten Hits in dieser Row */}
                                                 {hitsInThisMeasure.map((hit, hIdx) => {
                                                     let posPercent = ((hit.baseTime + hit.diff) / measureDuration) * 100;
@@ -118,7 +118,7 @@ export default function ResultPhase({
                     );
                 })}
         
-                <div className="flex flex-wrap justify-center gap-6 mt-8 p-4 bg-neutral-900/50 rounded-lg border border-neutral-800 text-xs text-neutral-400 tracking-widest">
+                <div className="flex flex-wrap justify-center gap-5 mt-6 p-4 bg-neutral-900/35 rounded-lg border border-white/10 text-xs text-neutral-400 tracking-widest">
                     {Array.from({ length: measures }).map((_, idx) => {
                         const colors = ['bg-cyan-400', 'bg-pink-400', 'bg-yellow-400', 'bg-stone-400', 'bg-purple-400'];
                         const colorCls = colors[idx % colors.length];

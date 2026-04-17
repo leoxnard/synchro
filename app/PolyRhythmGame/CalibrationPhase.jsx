@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function CalibrationPhase({ onComplete, onCancel }) {
     const [step, setStep] = useState('intro');
@@ -14,7 +14,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
     const bpm = 120;
     const intervalMs = (60 / bpm) * 1000;
 
-    const stopCalibrationAudio = () => {
+    const stopCalibrationAudio = useCallback(() => {
         if (schedulerRef.current) {
             window.clearInterval(schedulerRef.current);
             schedulerRef.current = null;
@@ -24,24 +24,58 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
             audioCtxRef.current.close().catch(console.error);
             audioCtxRef.current = null;
         }
-    };
+    }, []);
 
-    const scheduleNextClick = () => {
+    const playClick = useCallback((time) => {
+        if (!audioCtxRef.current) return;
+        const osc = audioCtxRef.current.createOscillator();
+        const gain = audioCtxRef.current.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtxRef.current.destination);
+        osc.frequency.value = 1000;
+        gain.gain.setValueAtTime(0.5, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+        osc.start(time);
+        osc.stop(time + 0.1);
+    }, []);
+
+    const scheduleNextClick = useCallback(() => {
         if (!audioCtxRef.current) return;
 
         const clickTime = nextClickTimeRef.current;
         playClick(clickTime);
 
         if (clickIndexRef.current >= 2) {
-            const audioToPerfOffset = performance.now() - (audioCtxRef.current.currentTime * 1000);
-            expectedTimesRef.current.push((clickTime * 1000) + audioToPerfOffset);
+            expectedTimesRef.current.push(clickTime * 1000);
         }
 
         clickIndexRef.current += 1;
         nextClickTimeRef.current += intervalMs / 1000;
-    };
+    }, [intervalMs, playClick]);
 
-    const startCalibration = () => {
+    const finishCalibration = useCallback(() => {
+        stepRef.current = 'done';
+        setStep('done');
+        stopCalibrationAudio();
+
+        const sorted = [...deltasRef.current].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const medianOffset = sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+
+        setTimeout(() => {
+            onComplete(medianOffset);
+        }, 1000);
+    }, [onComplete, stopCalibrationAudio]);
+
+    const handleCancel = useCallback(() => {
+        stepRef.current = 'intro';
+        stopCalibrationAudio();
+        onCancel();
+    }, [onCancel, stopCalibrationAudio]);
+
+    const startCalibration = useCallback(() => {
         stopCalibrationAudio();
         deltasRef.current = [];
         expectedTimesRef.current = [];
@@ -63,12 +97,12 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
 
         schedulerRef.current = window.setInterval(() => {
             if (!audioCtxRef.current || stepRef.current !== 'running') return;
-            const nowPerf = performance.now();
+            const nowAudioMs = audioCtxRef.current.currentTime * 1000;
             const hitWindowMs = intervalMs / 1.5;
 
             while (
                 expectedTimesRef.current.length > 0 &&
-                nowPerf - expectedTimesRef.current[0] > hitWindowMs
+                nowAudioMs - expectedTimesRef.current[0] > hitWindowMs
             ) {
                 expectedTimesRef.current.shift();
             }
@@ -77,20 +111,7 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
                 scheduleNextClick();
             }
         }, 50);
-    };
-
-    const playClick = (time) => {
-        if (!audioCtxRef.current) return;
-        const osc = audioCtxRef.current.createOscillator();
-        const gain = audioCtxRef.current.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtxRef.current.destination);
-        osc.frequency.value = 1000;
-        gain.gain.setValueAtTime(0.5, time);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-        osc.start(time);
-        osc.stop(time + 0.1);
-    };
+    }, [intervalMs, scheduleNextClick, stopCalibrationAudio]);
 
     useEffect(() => {
         stepRef.current = step;
@@ -115,7 +136,9 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
             if (e.key !== ' ' || step !== 'running') return;
             e.preventDefault();
 
-            const tapTime = performance.now();
+            if (!audioCtxRef.current) return;
+
+            const tapTime = audioCtxRef.current.currentTime * 1000;
             const hitWindowMs = intervalMs / 1.5;
 
             while (
@@ -143,72 +166,50 @@ export default function CalibrationPhase({ onComplete, onCancel }) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [step]);
-
-    const finishCalibration = () => {
-        stepRef.current = 'done';
-        setStep('done');
-        stopCalibrationAudio();
-        
-        const sorted = [...deltasRef.current].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        const medianOffset = sorted.length % 2 === 0 
-            ? (sorted[mid - 1] + sorted[mid]) / 2 
-            : sorted[mid];
-
-        setTimeout(() => {
-            onComplete(medianOffset);
-        }, 1000);
-    };
+    }, [finishCalibration, handleCancel, intervalMs, startCalibration, step]);
 
     useEffect(() => {
         return () => {
             stopCalibrationAudio();
         };
-    }, []);
-
-    const handleCancel = () => {
-        stepRef.current = 'intro';
-        stopCalibrationAudio();
-        onCancel();
-    };
+    }, [stopCalibrationAudio]);
 
     return (
-        <div className="w-full max-w-md bg-neutral-800 p-8 rounded-2xl shadow-2xl border border-neutral-700 text-center">
-            <h2 className="text-xl mb-4 font-semibold text-stone-400">Audio Calibration</h2>
+        <div className="w-full max-w-md p-2 text-center flex flex-col">
+            <h2 className="text-lg mb-3 font-semibold text-stone-300 tracking-wide">Audio Calibration</h2>
             
             {step === 'intro' && (
                 <>
-                    <p className="text-neutral-300 mb-6">
-                        To ensure your inputs are scored accurately, we'll quickly measure your system's audio latency.
+                    <p className="text-neutral-300 mb-5 text-sm">
+                        To ensure your inputs are scored accurately, we&apos;ll quickly measure your system&apos;s audio latency.
                     </p>
-                    <p className="text-sm text-neutral-400 mb-8">
-                        You'll hear a steady beat. Tap the <strong>SPACEBAR</strong> precisely on each downbeat.
+                    <p className="text-xs text-neutral-400 mb-7 tracking-wide">
+                        You&apos;ll hear a steady beat. Tap the <strong>SPACEBAR</strong> precisely on each downbeat.
                     </p>
                     <div className="flex gap-4 justify-center">
-                        <button onClick={handleCancel} className="px-4 py-2 rounded text-neutral-400 hover:text-white transition-colors">Cancel</button>
-                        <button onClick={startCalibration} className="px-6 py-2 bg-stone-500 text-neutral-900 font-bold rounded hover:bg-stone-400 transition-colors">Start</button>
+                        <button onClick={handleCancel} className="px-4 py-2 rounded text-neutral-400 hover:text-white transition-colors text-sm">Cancel</button>
+                        <button onClick={startCalibration} className="px-6 py-2 bg-stone-400 text-neutral-900 text-xs font-bold uppercase tracking-[0.14em] rounded-full hover:bg-stone-300 transition-colors">Start</button>
                     </div>
                 </>
             )}
 
             {step === 'running' && (
-                <div className="py-8">
-                    <p className="text-2xl font-bold mb-4 animate-pulse">Tap the spacebar!</p>
-                    <div className="w-full bg-neutral-900 h-4 rounded-full overflow-hidden">
+                <div className="py-7">
+                    <p className="text-xl font-bold mb-4 animate-pulse text-white">Tap the spacebar!</p>
+                    <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-stone-400 transition-all duration-200" 
+                            className="h-full bg-stone-300 transition-all duration-200" 
                             style={{ width: `${(progress / targetClicks) * 100}%` }}
                         />
                     </div>
-                    <p className="text-neutral-400 mt-4">{progress} / {targetClicks} Beats</p>
+                    <p className="text-neutral-400 mt-3 text-sm">{progress} / {targetClicks} Beats</p>
                 </div>
             )}
 
             {step === 'done' && (
-                <div className="py-8">
-                    <p className="text-2xl font-bold text-stone-400 mb-2">Perfect!</p>
-                    <p className="text-neutral-400">Calibration saved.</p>
+                <div className="py-7">
+                    <p className="text-2xl font-bold text-stone-300 mb-2">Perfect!</p>
+                    <p className="text-neutral-400 text-sm">Calibration saved.</p>
                 </div>
             )}
         </div>

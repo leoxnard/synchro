@@ -103,7 +103,7 @@ export default function SetupPhase({
     }, []);
 
     return (
-        <div className="w-full max-w-md bg-neutral-800 p-8 rounded-2xl shadow-2xl border border-neutral-700 relative">
+        <div className="w-full max-w-md p-1 relative flex flex-col">
             <div className="absolute -top-3 right-4" ref={calibrationMenuRef}>
                 <button
                     type="button"
@@ -121,7 +121,7 @@ export default function SetupPhase({
                 </button>
 
                 {showCalibrationMenu && (
-                    <div className="absolute right-0 mt-2 w-44 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden">
+                    <div className="absolute z-20 right-0 mt-2 w-44 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden">
                         <button
                             type="button"
                             onClick={() => {
@@ -146,38 +146,37 @@ export default function SetupPhase({
                 )}
             </div>
 
-            <div className="mb-6 pb-4 border-b border-neutral-700">
-                <h2 className="text-xl mb-3 font-semibold text-center">Configuration</h2>
+            <div className="mb-5 pb-3 border-b border-white/10">
                 <div className="flex gap-4 justify-center text-xs text-neutral-400">
                     <div className="flex flex-col items-center">
                         <span className="text-neutral-500 mb-1">Audio Offset</span>
-                        <span className={`font-bold ${latencyCompMs !== 0 ? (hasManualCalibration ? 'text-blue-400' : 'text-amber-400') : 'text-neutral-400'}`}>
+                        <span className={`font-bold ${latencyCompMs !== 0 ? (hasManualCalibration ? 'text-cyan-300' : 'text-amber-300') : 'text-neutral-400'}`}>
                             {latencyCompMs > 0 ? '+' : ''}{latencyCompMs}ms
                         </span>
                     </div>
                     <div className="flex flex-col items-center">
                         <span className="text-neutral-500 mb-1">Calibration</span>
-                        <span className={`font-bold ${hasManualCalibration ? 'text-blue-400' : 'text-neutral-400'}`}>
+                        <span className={`font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-neutral-400'}`}>
                             {hasManualCalibration ? 'Manual' : 'Auto'}
                         </span>
                     </div>
                 </div>
             </div>
       
-            <div className="flex gap-4 mb-6 pb-6 border-b border-neutral-700/50">
+            <div className="flex gap-3 mb-5 pb-5 border-b border-white/10">
                 <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} className="flex-1" />
                 <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} className="flex-1" />
                 <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} className="flex-1" />
             </div>
       
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 mb-5">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
           
                     return (
                         <div key={track.id} className="flex items-center gap-4">
-                            <div className="flex-1  p-1.5 flex items-center justify-between transition-colors">
+                            <div className="flex-1 p-1 flex items-center justify-between transition-colors">
                                 <div className="w-20">
                                     <NumberStepper
                                         value={track.pulses}
@@ -188,50 +187,47 @@ export default function SetupPhase({
                                 </div>
                                 <span className="text-neutral-500">Beats</span>
                             </div>
-                            <span className="text-xl font-bold text-neutral-600">on</span>
+                            <span className="text-lg font-bold text-neutral-600">on</span>
             
                             <div 
-                                className="flex-1 bg-neutral-900/80 hover:bg-neutral-800 rounded-lg p-2 flex items-center justify-center border border-neutral-700 focus-within:border-stone-400 transition-colors cursor-pointer outline-none relative group"
+                                className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
                                 tabIndex={0}
                                 onKeyDown={(e) => {
                                     e.preventDefault();
                                     updateTrack(track.id, 'key', e.key.toLowerCase());
                                 }}
                             >
-                                <span className="text-xl font-bold text-stone-400/80 uppercase tracking-widest">{displayKey}</span>
+                                <span className="text-lg font-bold text-stone-300 uppercase tracking-widest">{displayKey}</span>
                                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                                     Click & Press Key
                                 </div>
                             </div>
 
                             {tracks.length > 1 && (
-                                <button onClick={() => removeTrack(track.id)} className="text-red-400 hover:text-red-300 p-2 font-bold w-6 shrink-0">✕</button>
+                                <button onClick={() => removeTrack(track.id)} className="text-rose-400 hover:text-rose-300 p-2 font-bold w-6 shrink-0">✕</button>
                             )}
                         </div>
                     )})}
             </div>
 
-            <div className="flex justify-between mt-8">
+            <div className="flex justify-between mt-6">
                 {tracks.length < 5 ? (
                     <button 
                         onClick={addTrack}
-                        className="px-6 py-3 rounded-lg border border-neutral-600 hover:bg-neutral-700 transition-colors font-medium"
+                        className="px-5 py-2.5 rounded-full border border-white/15 hover:bg-white/[0.05] transition-colors font-medium text-sm"
                     >
                         + Rhythm
                     </button>
                 ) : (
-                    <div className="px-6 py-3 text-neutral-500 text-sm">Max. 5 rhythms</div>
+                    <div className="px-5 py-2.5 text-neutral-500 text-sm">Max. 5 rhythms</div>
                 )}
                 
                 <div className="flex gap-2">
                     <button 
                         onClick={startGame}
-                        className="px-8 py-3 flex items-center gap-2 rounded-lg bg-stone-500 hover:bg-stone-400 text-neutral-900 font-bold transition-all transform hover:scale-105"
+                        className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.14em] transition-all transform hover:scale-105"
                     >
-                        START 
-                        <span className="text-xs bg-neutral-900/20 px-2 py-1 rounded text-neutral-800 tracking-widest ml-1">
-                            ENTER
-                        </span>
+                        START
                     </button>
                 </div>
             </div>

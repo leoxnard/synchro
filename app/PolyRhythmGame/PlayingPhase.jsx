@@ -41,12 +41,12 @@ function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
     }, [measureDuration, basePulses, startTime]);
 
     return (
-        <div className="w-full max-w-xl mx-auto mt-4 bg-neutral-800 h-8 rounded-full border border-neutral-700 relative flex items-center px-4">
-            <div className="absolute left-4 z-10 font-bold text-xs text-neutral-400 tracking-widest pointer-events-none">{label} ({basePulses})</div>
+        <div className="w-full max-w-xl mx-auto mt-3 bg-white/[0.03] h-7 rounded-full border border-white/10 relative flex items-center px-4">
+            <div className="absolute left-4 z-10 font-bold text-[10px] text-neutral-400 tracking-widest pointer-events-none">{label} ({basePulses})</div>
             <div className="flex-1 h-full relative font-sans select-none">
                 <div 
                     ref={pointerRef}
-                    className="absolute top-0 bottom-0 w-8 bg-stone-400 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.6)] transform -translate-x-1/2 will-change-transform"
+                    className="absolute top-0.5 bottom-0.5 w-7 bg-stone-300 rounded-full shadow-[0_0_15px_rgba(214,211,209,0.45)] transform -translate-x-1/2 will-change-transform"
                 />
             </div>
         </div>
@@ -66,8 +66,8 @@ export default function PlayingPhase({
         return (
             <div className="w-full flex-1 flex flex-col items-center justify-center relative">
                 <div className="animate-pulse flex flex-col items-center">
-                    <p className="text-2xl font-light text-stone-400 mb-8">Get ready...</p>
-                    <div className="text-9xl font-black text-white mb-8">{count > 0 ? count : 'GO!'}</div>
+                    <p className="text-xl font-light text-stone-300 mb-6">Get ready...</p>
+                    <div className="text-8xl font-black text-white mb-7">{count > 0 ? count : 'GO!'}</div>
                 </div>
         
                 <div className="w-full px-8 opacity-70 flex flex-col gap-2">
@@ -82,19 +82,19 @@ export default function PlayingPhase({
                     ))}
                 </div>
         
-                <p className="text-neutral-500 text-sm mt-12 font-medium absolute bottom-12">(Press ESC to Abort)</p>
+                <p className="text-neutral-500 text-xs mt-10 font-medium absolute bottom-8 tracking-wide">(Press ESC to Abort)</p>
             </div>
         );
     }
 
     return (
-        <div className="w-full max-w-2xl text-center space-y-12">
+        <div className="w-full max-w-2xl text-center space-y-10 flex flex-col items-center">
             <div className="flex flex-col items-center">
-                <p className="text-2xl font-light animate-pulse text-stone-400">Game running... {measures} Measures</p>
-                <p className="text-neutral-500 text-sm mt-2 font-medium">(Press ESC to Abort)</p>
+                <p className="text-xl font-light animate-pulse text-stone-300">Game running... {measures} Measures</p>
+                <p className="text-neutral-500 text-xs mt-2 font-medium tracking-wide">(Press ESC to Abort)</p>
             </div>
       
-            <div className="flex justify-center gap-12">
+            <div className="flex justify-center gap-10">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
@@ -103,14 +103,14 @@ export default function PlayingPhase({
                     return (
                         <div key={track.id} className="flex flex-col items-center gap-4">
                             <div 
-                                className={`w-32 h-32 rounded-full border-4 flex items-center justify-center text-4xl font-bold transition-all duration-75 
+                                className={`w-28 h-28 rounded-full border-4 flex items-center justify-center text-3xl font-bold transition-all duration-75 
                 ${isPressed 
-                            ? 'bg-stone-500 border-stone-400 text-neutral-900 scale-110 shadow-[0_0_30px_rgba(52,211,153,0.6)]' 
-                            : 'bg-neutral-800 border-neutral-700 text-neutral-500'}`}
+                            ? 'bg-stone-300 border-stone-200 text-neutral-900 scale-110 shadow-[0_0_26px_rgba(214,211,209,0.45)]' 
+                            : 'bg-white/[0.03] border-white/10 text-neutral-500'}`}
                             >
                                 {track.pulses}
                             </div>
-                            <div className="text-xl font-bold px-4 py-2 bg-neutral-800 rounded-lg text-neutral-400">
+                            <div className="text-lg font-bold px-4 py-1.5 bg-white/[0.03] rounded-lg text-neutral-400 border border-white/10">
                                 {displayKey}
                             </div>
                         </div>
