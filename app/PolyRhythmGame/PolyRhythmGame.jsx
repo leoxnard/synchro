@@ -176,6 +176,7 @@ export default function PolyrhythmGame() {
     const [bpm, setBpm] = useState(90);
     const [measures, setMeasures] = useState(4);
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
+    const [countInBars, setCountInBars] = useState(1);
     const [tracks, setTracks] = useState([
         { id: 1, pulses: 4, key: 'shift' },
         { id: 2, pulses: 3, key: ' ' }
@@ -215,6 +216,7 @@ export default function PolyrhythmGame() {
     const actualTapsRef = useRef([]);
     const expectedTapsRef = useRef([]);
     const audioCtxRef = useRef(null);
+    const activeAudioNodesRef = useRef([]);
     const detailedResultsRef = useRef([]); 
     const timeoutsRef = useRef([]); 
 
@@ -264,6 +266,44 @@ export default function PolyrhythmGame() {
         gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
         osc.start(time);
         osc.stop(time + 0.1);
+        activeAudioNodesRef.current.push({ osc, gain });
+    };
+
+    const scheduleDedupedClickEvents = (events) => {
+        if (!Array.isArray(events) || events.length === 0) return;
+
+        const CLICK_DEDUP_EPSILON_MS = 6;
+        const sorted = [...events].sort((a, b) => a.time - b.time);
+        const deduped = [];
+
+        sorted.forEach((event) => {
+            const last = deduped[deduped.length - 1];
+            if (!last) {
+                deduped.push(event);
+                return;
+            }
+
+            const isSameTime = Math.abs((event.time - last.time) * 1000) <= CLICK_DEDUP_EPSILON_MS;
+            if (!isSameTime) {
+                deduped.push(event);
+                return;
+            }
+
+            if ((event.priority || 0) > (last.priority || 0)) {
+                deduped[deduped.length - 1] = event;
+            }
+        });
+
+        deduped.forEach((event) => playMetronomeClick(event.time, event.freq));
+    };
+
+    const stopAllAudioNodes = () => {
+        activeAudioNodesRef.current.forEach(({ osc, gain }) => {
+            try { osc.stop(); } catch (_) {}
+            try { osc.disconnect(); } catch (_) {}
+            try { gain.disconnect(); } catch (_) {}
+        });
+        activeAudioNodesRef.current = [];
     };
 
     const calculateExpectedTaps = () => {
@@ -299,6 +339,10 @@ export default function PolyrhythmGame() {
         }
 
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtxRef.current.state !== 'running') {
+            await audioCtxRef.current.resume().catch(() => {});
+        }
+        stopAllAudioNodes();
         timeoutsRef.current.forEach(clearTimeout);
         timeoutsRef.current = [];
 
@@ -307,44 +351,69 @@ export default function PolyrhythmGame() {
         setExpectedTaps(nextExpectedTaps);
         actualTapsRef.current = [];
 
+        const countInTotalBeats = Math.max(1, countInBars * beatsPerMeasure);
         setGameState('countIn');
-        setCount(beatsPerMeasure); 
+        setCount(countInTotalBeats); 
     
         const startOffset = 0.1;
         const now = audioCtxRef.current.currentTime + startOffset;
+        const beatDurationMs = measureDuration / beatsPerMeasure;
+        const countInDurationMs = countInBars * measureDuration;
+        const countInDurationSecs = countInDurationMs / 1000;
         const measureDurationSecs = measureDuration / 1000;
         const audioToPerfOffset = getAudioContextOffset();
     
-        startTimeRef.current = ((now + measureDurationSecs) * 1000) + audioToPerfOffset;
+        startTimeRef.current = ((now + countInDurationSecs) * 1000) + audioToPerfOffset;
     
-        tracks.forEach((track, index) => {
-            const trackFreq = index === 0 ? 1000 : (index === 1 ? 600 : 400); 
-            for (let p = 0; p < track.pulses; p++) {
-                const time = now + (p / track.pulses) * measureDurationSecs;
-                const isBeatOne = (p === 0);
-                playMetronomeClick(time, isBeatOne ? Math.max(trackFreq, 1200) : trackFreq);
-            }
-        });
+        const clickEvents = [];
 
-        for (let b = 0; b < beatsPerMeasure; b++) {
+        // Base beat track in count-in and playing phase.
+        for (let b = 0; b < countInTotalBeats; b++) {
+            const time = now + ((b * beatDurationMs) / 1000);
+            const isCountInAccent = (b % Math.max(1, beatsPerMeasure)) === 0;
+            clickEvents.push({ time, freq: isCountInAccent ? 1200 : 1000, priority: 2 });
+        }
+
+        for (let b = 0; b < countInTotalBeats; b++) {
             timeoutsRef.current.push(setTimeout(() => {
-                setCount(beatsPerMeasure - b);
-            }, (startOffset * 1000) + b * (measureDuration / beatsPerMeasure)));
+                setCount(countInTotalBeats - b);
+            }, (startOffset * 1000) + (b * beatDurationMs)));
         }
 
         timeoutsRef.current.push(setTimeout(() => {
             setGameState('playing');
-        }, (startOffset * 1000) + measureDuration));
+        }, (startOffset * 1000) + countInDurationMs));
     
-        for (let m = 0; m < measures; m++) {
-            for (let p = 0; p < beatsPerMeasure; p++) {
-                const isMeasureStart = (p === 0);
-                const time = now + measureDurationSecs + m * measureDurationSecs + (p / beatsPerMeasure) * measureDurationSecs;
-                playMetronomeClick(time, isMeasureStart ? 1200 : 1000);
+        const countInRhythmBars = countInBars;
+
+        tracks.forEach((track, trackIndex) => {
+            const pulseDurationSecs = measureDurationSecs / Math.max(1, track.pulses);
+            const accentFreq = [1200, 1120, 1040, 980, 920][trackIndex] || 1200;
+            const pulseFreq = [980, 860, 760, 680, 620][trackIndex] || 980;
+
+            for (let m = 0; m < countInRhythmBars; m += 1) {
+                for (let p = 0; p < track.pulses; p += 1) {
+                    const time = now + (m * measureDurationSecs) + (p * pulseDurationSecs);
+                    clickEvents.push({ time, freq: p === 0 ? accentFreq : pulseFreq, priority: 1 });
+                }
+            }
+        });
+
+        for (let m = 0; m < measures; m += 1) {
+            for (let p = 0; p < beatsPerMeasure; p += 1) {
+                const isMeasureStart = p === 0;
+                const time = now + countInDurationSecs + m * measureDurationSecs + (p / beatsPerMeasure) * measureDurationSecs;
+                clickEvents.push({ time, freq: isMeasureStart ? 1200 : 1000, priority: 2 });
             }
         }
-    
-        playMetronomeClick(now + measureDurationSecs + measures * measureDurationSecs, 1200);
+
+        clickEvents.push({
+            time: now + countInDurationSecs + (measures * measureDurationSecs),
+            freq: 1200,
+            priority: 2
+        });
+
+        scheduleDedupedClickEvents(clickEvents);
 
         const dynamicEndTapGraceMs = Math.max(
             END_TAP_GRACE_MS,
@@ -353,16 +422,19 @@ export default function PolyrhythmGame() {
 
         timeoutsRef.current.push(setTimeout(() => {
             endGame();
-        }, (startOffset * 1000) + measureDuration + (measureDuration * measures) + dynamicEndTapGraceMs));
+        }, (startOffset * 1000) + countInDurationMs + (measureDuration * measures) + dynamicEndTapGraceMs));
     };
 
     const abortGame = () => {
         timeoutsRef.current.forEach(clearTimeout);
         timeoutsRef.current = [];
+        stopAllAudioNodes();
         if (audioCtxRef.current) {
             audioCtxRef.current.close().catch(console.error);
             audioCtxRef.current = null;
         }
+        actualTapsRef.current = [];
+        expectedTapsRef.current = [];
         setGameState('setup');
     };
 
@@ -523,7 +595,7 @@ export default function PolyrhythmGame() {
                 if (gameState === 'setup') {
                     startGame();
                 } else if (gameState === 'result') {
-                    setGameState('setup');
+                    abortGame();
                 }
                 return;
             }
@@ -586,12 +658,14 @@ export default function PolyrhythmGame() {
                             setMeasures={setMeasures}
                             beatsPerMeasure={beatsPerMeasure}
                             setBeatsPerMeasure={setBeatsPerMeasure}
+                            countInBars={countInBars}
+                            setCountInBars={setCountInBars}
                         />
                     )}
 
                     {gameState === 'latencyTest' && (
                         <LatencyTestPhase
-                            onClose={() => setGameState('setup')}
+                            onClose={abortGame}
                         />
                     )}
 
@@ -603,6 +677,7 @@ export default function PolyrhythmGame() {
                             activeKeys={activeKeys}
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
+                            countInDuration={countInBars * measureDuration}
                             measures={measures}
                         />
                     )}
@@ -616,7 +691,7 @@ export default function PolyrhythmGame() {
                             measureDuration={measureDuration}
                             measures={measures}
                             lastAutoCorrectionMs={lastAutoCorrectionMs}
-                            setGameState={setGameState}
+                            onTryAgain={abortGame}
                         />
                     )}
                 </div>

@@ -279,13 +279,6 @@ export default function LatencyTestPhase({ onClose }) {
                     >
                         Reset
                     </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-full border border-white/15 text-neutral-300 text-xs font-semibold tracking-wide hover:text-white hover:bg-white/[0.06] transition-colors"
-                    >
-                        Continue
-                    </button>
                 </div>
             </div>
 

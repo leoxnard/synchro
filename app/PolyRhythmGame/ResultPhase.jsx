@@ -8,7 +8,7 @@ export default function ResultPhase({
     measureDuration,
     measures,
     lastAutoCorrectionMs,
-    setGameState
+    onTryAgain
 }) {
     return (
         <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up overflow-y-auto pr-1">
@@ -17,7 +17,7 @@ export default function ResultPhase({
                 {score}%
             </div>
             <button 
-                onClick={() => setGameState('setup')}
+                onClick={onTryAgain}
                 className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm mb-8"
             >
                 Try Again

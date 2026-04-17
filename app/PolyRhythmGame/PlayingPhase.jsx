@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
+function MetronomePendulum({ measureDuration, countInDuration, basePulses, startTime, label }) {
     const pointerRef = useRef(null);
 
     useEffect(() => {
@@ -10,25 +10,22 @@ function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
             if (!pointerRef.current) return;
       
             const now = performance.now();
-            const countInStartTime = startTime - measureDuration;
+            const countInStartTime = startTime - countInDuration;
       
             let totalElapsed = now - countInStartTime;
       
             if (totalElapsed < 0) totalElapsed = 0;
       
-            const elapsed = totalElapsed % measureDuration;
-            const beatDuration = measureDuration / basePulses;
-            const cycleDuration = beatDuration * 2;
-            const safeElapsed = ((elapsed % cycleDuration) + cycleDuration) % cycleDuration;
-      
-            const beatPhase = safeElapsed / beatDuration;
-            let positionPercent = 0;
-      
-            if (beatPhase < 1) {
-                positionPercent = beatPhase * 100;
-            } else {
-                positionPercent = (2 - (beatPhase)) * 100;
-            }
+            const beatDuration = measureDuration / Math.max(1, basePulses);
+            const measureIndex = Math.floor(totalElapsed / measureDuration);
+            const elapsedInMeasure = totalElapsed % measureDuration;
+            const beatIndex = Math.floor(elapsedInMeasure / beatDuration);
+            const beatProgress = (elapsedInMeasure % beatDuration) / beatDuration;
+            const reverseThisMeasure = (basePulses % 2 === 1) && (measureIndex % 2 === 1);
+            const movingForward = (beatIndex % 2 === 0) !== reverseThisMeasure;
+            const positionPercent = movingForward
+                ? beatProgress * 100
+                : (1 - beatProgress) * 100;
 
             pointerRef.current.style.left = `${positionPercent}%`;
       
@@ -38,7 +35,7 @@ function MetronomePendulum({ measureDuration, basePulses, startTime, label }) {
         animationFrameId = requestAnimationFrame(renderLoop);
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [measureDuration, basePulses, startTime]);
+    }, [measureDuration, countInDuration, basePulses, startTime]);
 
     return (
         <div className="w-full max-w-xl mx-auto mt-3 bg-white/[0.03] h-7 rounded-full border border-white/10 relative flex items-center px-4">
@@ -60,6 +57,7 @@ export default function PlayingPhase({
     activeKeys,
     startTime,
     measureDuration,
+    countInDuration,
     measures
 }) {
     const trackCount = tracks.length;
@@ -84,6 +82,7 @@ export default function PlayingPhase({
                             key={track.id}
                             label={track.key === ' ' ? 'SPACE' : track.key}
                             measureDuration={measureDuration} 
+                            countInDuration={countInDuration}
                             basePulses={track.pulses} 
                             startTime={startTime} 
                         />

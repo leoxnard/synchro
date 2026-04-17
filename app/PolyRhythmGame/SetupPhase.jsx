@@ -34,8 +34,12 @@ function NumberStepper({
     };
 
     return (
-        <div className={`flex flex-col gap-2 relative group ${className}`}>
-            {label && <label className="text-xs text-neutral-400 uppercase tracking-widest font-bold">{label}</label>}
+        <div className={`flex flex-col gap-1 relative group ${className}`}>
+            {label && (
+                <label className="flex items-end text-[0.625rem] text-neutral-400 uppercase tracking-widest leading-4 text-left">
+                    {label}
+                </label>
+            )}
             <div className="relative">
                 <input
                     type="number"
@@ -83,7 +87,9 @@ export default function SetupPhase({
     measures,
     setMeasures,
     beatsPerMeasure,
-    setBeatsPerMeasure
+    setBeatsPerMeasure,
+    countInBars,
+    setCountInBars
 }) {
     return (
         <div className="w-full h-full relative flex flex-col p-1">
@@ -114,18 +120,22 @@ export default function SetupPhase({
                         </div>
                     </div>
                 </div>
-      
-                <div className="flex gap-3 mb-5 pb-5 border-b border-white/10">
-                    <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} className="flex-1" />
-                    <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} className="flex-1" />
-                    <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} className="flex-1" />
+
+                <div
+                    className="grid gap-2 mb-5 pb-5 border-b border-white/10 items-end"
+                    style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+                >
+                    <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} />
+                    <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} />
+                    <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} />
+                    <NumberStepper label="Count-In (Bars)" value={countInBars} onChange={setCountInBars} min={1} max={8} />
                 </div>
-      
+
                 <div className="space-y-3 mb-5 flex-1">
                     {tracks.map(track => {
                         const assignedKey = track.key || '';
                         const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
-          
+
                         return (
                             <div key={track.id} className="flex items-center gap-4">
                                 <div className="flex-1 p-1 flex items-center justify-between transition-colors">
@@ -140,8 +150,8 @@ export default function SetupPhase({
                                     <span className="text-neutral-500">Beats</span>
                                 </div>
                                 <span className="text-lg font-bold text-neutral-600">on</span>
-            
-                                <div 
+
+                                <div
                                     className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
                                     tabIndex={0}
                                     onKeyDown={(e) => {
@@ -151,7 +161,7 @@ export default function SetupPhase({
                                 >
                                     <span className="text-lg font-bold text-stone-300 uppercase tracking-widest">{displayKey}</span>
                                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                                    Click & Press Key
+                                        Click & Press Key
                                     </div>
                                 </div>
 
@@ -159,13 +169,14 @@ export default function SetupPhase({
                                     <button onClick={() => removeTrack(track.id)} className="text-stone-400 hover:text-stone-300 p-2 font-bold w-6 shrink-0">✕</button>
                                 )}
                             </div>
-                        )})}
+                        );
+                    })}
                 </div>
             </div>
 
             <div className="absolute bottom-1 left-1 right-1 flex justify-between items-center">
                 {tracks.length < 5 ? (
-                    <button 
+                    <button
                         onClick={addTrack}
                         className="px-5 py-2.5 rounded-full border border-white/15 hover:bg-white/[0.05] transition-colors font-medium text-sm"
                     >
@@ -174,9 +185,9 @@ export default function SetupPhase({
                 ) : (
                     <div className="px-5 py-2.5 text-neutral-500 text-sm">Max. 5 rhythms</div>
                 )}
-                
+
                 <div className="flex gap-2">
-                    <button 
+                    <button
                         onClick={startGame}
                         className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.14em] transition-all transform hover:scale-105"
                     >
