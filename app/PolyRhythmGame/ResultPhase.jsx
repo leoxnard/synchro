@@ -54,7 +54,7 @@ export default function ResultPhase({
             <div className="w-full space-y-4 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
-                    const displayKey = assignedKey === ' ' ? 'ENTER' : assignedKey.toUpperCase();
+                    const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
                     const expectedForTrack = expectedTaps.filter(e => e.trackId === track.id && e.measureIndex === 0);
           
                     const expectedBaseTimes = [...expectedForTrack.map(e => e.baseTime)];

@@ -77,6 +77,7 @@ export default function SetupPhase({
     removeTrack,
     startGame,
     onForceCalibrate,
+    onOpenLatencyTest,
     onResetCalibration,
     latencyCompMs,
     hasManualCalibration,
@@ -107,13 +108,22 @@ export default function SetupPhase({
                                 </span>
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={hasManualCalibration ? onResetCalibration : onForceCalibrate}
-                            className="shrink-0 px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
-                        >
-                            {hasManualCalibration ? 'Clear Calibration' : 'Run Calibration'}
-                        </button>
+                        <div className="shrink-0 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={onOpenLatencyTest}
+                                className="px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
+                            >
+                                Open Test Window
+                            </button>
+                            <button
+                                type="button"
+                                onClick={hasManualCalibration ? onResetCalibration : onForceCalibrate}
+                                className="px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
+                            >
+                                {hasManualCalibration ? 'Clear Calibration' : 'Run Calibration'}
+                            </button>
+                        </div>
                     </div>
                 </div>
       

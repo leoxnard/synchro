@@ -5,10 +5,16 @@ import SetupPhase from './SetupPhase';
 import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
 import CalibrationPhase from './CalibrationPhase';
+import LatencyTestPhase from './LatencyTestPhase';
 
 const LATENCY_STORAGE_KEY = 'polyrhythm_latency_comp_ms';
-const MAX_LATENCY_COMP_MS = 300;
+const MAX_LATENCY_COMP_MS = 2000;
 const DEFAULT_LATENCY_COMP_MS = 0; 
+const SCORE_UPLIFT_GAMMA = 0.92;
+const AUTO_LATENCY_SAMPLE_MAX_MS = 800;
+const MAX_AUTO_CORRECTION_MS = 600;
+const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
+const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -26,13 +32,24 @@ const signOf = (value, deadzone = 0) => {
     return value > 0 ? 1 : -1;
 };
 
+const normalizeLatencyMs = (latencyMs, cycleMs) => {
+    if (!Number.isFinite(latencyMs)) return 0;
+    if (latencyMs >= MIN_ALLOWED_NEGATIVE_LATENCY_MS) return latencyMs;
+    if (!Number.isFinite(cycleMs) || cycleMs <= 0) return MIN_ALLOWED_NEGATIVE_LATENCY_MS;
+
+    let adjusted = latencyMs;
+    while (adjusted < MIN_ALLOWED_NEGATIVE_LATENCY_MS) {
+        adjusted += cycleMs;
+    }
+
+    return adjusted;
+};
+
 const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDuration }) => {
     const MIN_MATCHED_SAMPLES = 8;
     const MIN_ABS_MEDIAN_MS = 8;
     const DIRECTION_DEADZONE_MS = 10;
     const BUCKET_DEADZONE_MS = 8;
-    const MAX_AUTO_CORRECTION_MS = 120;
-
     if (matchedResults.length < MIN_MATCHED_SAMPLES) return 0;
 
     const diffs = matchedResults.map((result) => result.diff);
@@ -81,6 +98,81 @@ const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDurati
     if (oppositeDirectionWeight > sameDirectionWeight * 0.3) return 0;
 
     return clamp(overallMedian, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
+};
+
+const estimateFallbackAutoLatencyMs = (samples) => {
+    const MIN_FALLBACK_SAMPLES = 5;
+    const MIN_FALLBACK_MEDIAN_MS = 20;
+
+    const filteredDiffs = samples
+        .map((sample) => sample.diff)
+        .filter((diff) => Number.isFinite(diff) && Math.abs(diff) <= AUTO_LATENCY_SAMPLE_MAX_MS);
+
+    if (filteredDiffs.length < MIN_FALLBACK_SAMPLES) return 0;
+
+    const fallbackMedian = median(filteredDiffs);
+    if (Math.abs(fallbackMedian) < MIN_FALLBACK_MEDIAN_MS) return 0;
+
+    return clamp(fallbackMedian, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
+};
+
+const buildAutoLatencySamples = ({ expectedTaps, actualTaps }) => {
+    const expectedByKey = new Map();
+    expectedTaps.forEach((tap) => {
+        if (!expectedByKey.has(tap.key)) {
+            expectedByKey.set(tap.key, []);
+        }
+        expectedByKey.get(tap.key).push(tap);
+    });
+
+    expectedByKey.forEach((list) => list.sort((a, b) => a.time - b.time));
+
+    const actualByKey = new Map();
+    actualTaps.forEach((tap) => {
+        if (!actualByKey.has(tap.key)) {
+            actualByKey.set(tap.key, []);
+        }
+        actualByKey.get(tap.key).push(tap);
+    });
+
+    actualByKey.forEach((list) => list.sort((a, b) => a.time - b.time));
+
+    const samples = [];
+
+    actualByKey.forEach((actualList, key) => {
+        const expectedList = expectedByKey.get(key);
+        if (!expectedList || expectedList.length === 0) return;
+
+        let expectedIdx = 0;
+
+        actualList.forEach((actualTap) => {
+            while (
+                expectedIdx + 1 < expectedList.length &&
+                expectedList[expectedIdx + 1].time <= actualTap.time
+            ) {
+                expectedIdx += 1;
+            }
+
+            const expectedTap = expectedList[expectedIdx];
+            if (!expectedTap) return;
+
+            const nextExpectedTap = expectedList[expectedIdx + 1] || null;
+            const nearestExpectedTap = nextExpectedTap && Math.abs(actualTap.time - nextExpectedTap.time) < Math.abs(actualTap.time - expectedTap.time)
+                ? nextExpectedTap
+                : expectedTap;
+
+            const diff = actualTap.time - nearestExpectedTap.time;
+            if (Math.abs(diff) > AUTO_LATENCY_SAMPLE_MAX_MS) return;
+
+            samples.push({
+                trackId: nearestExpectedTap.trackId,
+                baseTime: nearestExpectedTap.baseTime,
+                diff
+            });
+        });
+    });
+
+    return samples;
 };
 
 export default function PolyrhythmGame() {
@@ -148,7 +240,7 @@ export default function PolyrhythmGame() {
         const newTotal = tracks.length + 1;
         const defaultKeys = getAssignedKey(0, newTotal) !== '' ? Array.from({length: newTotal}).map((_,i) => getAssignedKey(i, newTotal)) : ['a', 'shift', 'w', ' ', 'd'];
         
-        const newTracks = [...tracks, { id: Date.now(), pulses: 4 }].map((t, index) => ({
+        const newTracks = [...tracks, { id: Date.now(), pulses: 1 }].map((t, index) => ({
             ...t,
             key: defaultKeys[index] || t.key
         }));
@@ -292,121 +384,124 @@ export default function PolyrhythmGame() {
     };
 
     const calculateScore = () => {
-        let totalDeviation = 0; 
-        let maxAllowedDeviation = 0; 
         const expected = expectedTapsRef.current;
-        const availableActualTaps = [...actualTapsRef.current];
-        const nextDetailedResults = [];
         let autoCorrectionMs = 0;
+        const beatDurationMs = measureDuration / Math.max(1, beatsPerMeasure);
 
-        expected.forEach(exp => {
-            const track = tracks.find(t => t.id === exp.trackId);
-            const maxErrorForBeat = (measureDuration / track.pulses) / 2;
-            maxAllowedDeviation += maxErrorForBeat;
+        const scoreWithCorrection = (correctionMs) => {
+            let totalDeviation = 0;
+            let maxAllowedDeviation = 0;
+            const availableActualTaps = [...actualTapsRef.current];
+            const detailed = [];
 
-            const matchingTaps = availableActualTaps.filter(act => act.key === exp.key);
-      
-            if (matchingTaps.length === 0) {
-                totalDeviation += maxErrorForBeat;
-                nextDetailedResults.push({ ...exp, actualTime: null, diff: null });
-                return; 
-            }
+            expected.forEach(exp => {
+                const track = tracks.find(t => t.id === exp.trackId);
+                const maxErrorForBeat = (measureDuration / track.pulses) / 2;
+                maxAllowedDeviation += maxErrorForBeat;
 
-            let closestTap = matchingTaps.reduce((prev, curr) => 
-                Math.abs(curr.time - exp.time) < Math.abs(prev.time - exp.time) ? curr : prev
-            );
+                const matchingTaps = availableActualTaps.filter(act => act.key === exp.key);
 
-            const diff = closestTap.time - exp.time;
-            const absDiff = Math.abs(diff);
-      
-            if (absDiff <= maxErrorForBeat) {
-                totalDeviation += absDiff;
-                nextDetailedResults.push({
-                    ...exp,
-                    actualTime: closestTap.time,
-                    diff
-                });
-
-                const usedIndex = availableActualTaps.findIndex(act => act === closestTap);
-                if (usedIndex > -1) {
-                    availableActualTaps.splice(usedIndex, 1);
+                if (matchingTaps.length === 0) {
+                    totalDeviation += maxErrorForBeat;
+                    detailed.push({ ...exp, actualTime: null, diff: null });
+                    return;
                 }
-            } else {
-                totalDeviation += maxErrorForBeat;
-                nextDetailedResults.push({ ...exp, actualTime: null, diff: null });
-            }
-        });
 
-        const extraTaps = availableActualTaps.filter(act => tracks.some(t => t.key === act.key));
-        const avgMaxError = expected.length > 0 ? (maxAllowedDeviation / expected.length) : 200;
-        totalDeviation += extraTaps.length * (avgMaxError / 2);
-
-        extraTaps.forEach(act => {
-            const track = tracks.find(t => t.key === act.key);
-            if (track) {
-                const measureIndex = Math.floor(act.time / measureDuration);
-                const baseTime = act.time % measureDuration;
-                nextDetailedResults.push({
-                    trackId: track.id,
-                    key: act.key,
-                    baseTime: baseTime,
-                    diff: 0,
-                    actualTime: act.time,
-                    measureIndex: measureIndex,
-                    isExtra: true
+                const closestTap = matchingTaps.reduce((prev, curr) => {
+                    const prevCorrectedDiff = (prev.time - exp.time) - correctionMs;
+                    const currCorrectedDiff = (curr.time - exp.time) - correctionMs;
+                    return Math.abs(currCorrectedDiff) < Math.abs(prevCorrectedDiff) ? curr : prev;
                 });
-            }
-        });
+
+                const correctedDiff = (closestTap.time - exp.time) - correctionMs;
+                const absCorrectedDiff = Math.abs(correctedDiff);
+
+                if (absCorrectedDiff <= maxErrorForBeat) {
+                    totalDeviation += absCorrectedDiff;
+                    detailed.push({
+                        ...exp,
+                        actualTime: closestTap.time,
+                        diff: correctedDiff
+                    });
+
+                    const usedIndex = availableActualTaps.findIndex(act => act === closestTap);
+                    if (usedIndex > -1) {
+                        availableActualTaps.splice(usedIndex, 1);
+                    }
+                } else {
+                    totalDeviation += maxErrorForBeat;
+                    detailed.push({ ...exp, actualTime: null, diff: null });
+                }
+            });
+
+            const extraTaps = availableActualTaps.filter(act => tracks.some(t => t.key === act.key));
+            const avgMaxError = expected.length > 0 ? (maxAllowedDeviation / expected.length) : 200;
+            totalDeviation += extraTaps.length * (avgMaxError / 2);
+
+            extraTaps.forEach(act => {
+                const track = tracks.find(t => t.key === act.key);
+                if (track) {
+                    const measureIndex = Math.floor(act.time / measureDuration);
+                    const baseTime = act.time % measureDuration;
+                    detailed.push({
+                        trackId: track.id,
+                        key: act.key,
+                        baseTime,
+                        diff: 0,
+                        actualTime: act.time,
+                        measureIndex,
+                        isExtra: true
+                    });
+                }
+            });
+
+            return {
+                totalDeviation,
+                maxAllowedDeviation,
+                detailed
+            };
+        };
+
+        let scoring = scoreWithCorrection(0);
 
         if (!hasManualCalibration) {
-            const matchedResults = nextDetailedResults.filter(result => !result.isExtra && result.diff !== null);
+            const matchedResults = buildAutoLatencySamples({
+                expectedTaps: expected,
+                actualTaps: actualTapsRef.current
+            });
             autoCorrectionMs = estimateAutoLatencyCorrectionMs({
                 matchedResults,
                 tracks,
                 measureDuration
             });
 
+            if (autoCorrectionMs === 0) {
+                autoCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
+            }
+
+            autoCorrectionMs = normalizeLatencyMs(autoCorrectionMs, beatDurationMs);
+            autoCorrectionMs = clamp(autoCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
+
             setLastAutoCorrectionMs(autoCorrectionMs);
 
             if (autoCorrectionMs !== 0) {
-                totalDeviation = 0;
-                nextDetailedResults.forEach((result) => {
-                    if (result.isExtra) return;
-
-                    const track = tracks.find(t => t.id === result.trackId);
-                    if (!track) return;
-                    const maxErrorForBeat = (measureDuration / track.pulses) / 2;
-
-                    if (result.diff === null) {
-                        totalDeviation += maxErrorForBeat;
-                        return;
-                    }
-
-                    const correctedDiff = result.diff - autoCorrectionMs;
-                    const absCorrectedDiff = Math.abs(correctedDiff);
-
-                    if (absCorrectedDiff <= maxErrorForBeat) {
-                        totalDeviation += absCorrectedDiff;
-                        result.diff = correctedDiff;
-                    } else {
-                        totalDeviation += maxErrorForBeat;
-                        result.actualTime = null;
-                        result.diff = null;
-                    }
-                });
-
-                totalDeviation += extraTaps.length * (avgMaxError / 2);
+                scoring = scoreWithCorrection(autoCorrectionMs);
             }
+        } else {
+            setLastAutoCorrectionMs(0);
         }
 
-        detailedResultsRef.current = nextDetailedResults;
-        setDetailedResults(nextDetailedResults);
+        detailedResultsRef.current = scoring.detailed;
+        setDetailedResults(scoring.detailed);
 
-        const finalPercentage = maxAllowedDeviation > 0 
-            ? 100 - ((totalDeviation / maxAllowedDeviation) * 100) 
+        const rawPercentage = scoring.maxAllowedDeviation > 0
+            ? 100 - ((scoring.totalDeviation / scoring.maxAllowedDeviation) * 100)
             : 0;
-    
-        setScore(Math.max(0, Math.round(finalPercentage)));
+
+        const normalizedRawScore = clamp(rawPercentage / 100, 0, 1);
+        const upliftedPercentage = Math.pow(normalizedRawScore, SCORE_UPLIFT_GAMMA) * 100;
+
+        setScore(Math.max(0, Math.round(upliftedPercentage)));
     };
 
     useEffect(() => {
@@ -421,6 +516,10 @@ export default function PolyrhythmGame() {
 
             if (gameState === 'calibrating') {
                 e.preventDefault();
+                return;
+            }
+
+            if (gameState === 'latencyTest') {
                 return;
             }
 
@@ -440,9 +539,11 @@ export default function PolyrhythmGame() {
             if (key === ' ') e.preventDefault();
       
             const validKeys = tracks.map(t => t.key || '');
+            const pressTime = performance.now() - startTimeRef.current;
+
+            if (gameState !== 'playing' && (gameState !== 'countIn' || pressTime < -START_TAP_GRACE_MS)) return;
       
             if (validKeys.includes(key)) {
-                const pressTime = performance.now() - startTimeRef.current;
                 actualTapsRef.current.push({ key, time: pressTime });
         
                 setActiveKeys(prev => ({ ...prev, [key]: true }));
@@ -483,6 +584,7 @@ export default function PolyrhythmGame() {
                             removeTrack={removeTrack}
                             startGame={startGame}
                             onForceCalibrate={() => setGameState('calibrating')}
+                            onOpenLatencyTest={() => setGameState('latencyTest')}
                             latencyCompMs={latencyCompMs}
                             hasManualCalibration={hasManualCalibration}
                             onResetCalibration={() => {
@@ -505,12 +607,21 @@ export default function PolyrhythmGame() {
                         <CalibrationPhase
                             onCancel={() => setGameState('setup')}
                             onComplete={(offsetMs) => {
-                                const clampedOffsetMs = clamp(offsetMs, -MAX_LATENCY_COMP_MS, MAX_LATENCY_COMP_MS);
+                                const beatDurationMs = measureDuration / Math.max(1, beatsPerMeasure);
+                                const normalizedOffsetMs = normalizeLatencyMs(offsetMs, beatDurationMs);
+                                const clampedOffsetMs = clamp(normalizedOffsetMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_LATENCY_COMP_MS);
                                 setLatencyCompMs(clampedOffsetMs);
                                 setHasManualCalibration(true);
                                 window.localStorage.setItem(LATENCY_STORAGE_KEY, String(Math.round(clampedOffsetMs)));
                                 setGameState('setup');
                             }}
+                        />
+                    )}
+
+                    {gameState === 'latencyTest' && (
+                        <LatencyTestPhase
+                            bpm={bpm}
+                            onClose={() => setGameState('setup')}
                         />
                     )}
 
