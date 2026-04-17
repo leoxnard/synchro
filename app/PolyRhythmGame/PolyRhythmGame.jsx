@@ -4,17 +4,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import SetupPhase from './SetupPhase';
 import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
-import CalibrationPhase from './CalibrationPhase';
 import LatencyTestPhase from './LatencyTestPhase';
 
-const LATENCY_STORAGE_KEY = 'polyrhythm_latency_comp_ms';
 const MAX_LATENCY_COMP_MS = 2000;
 const DEFAULT_LATENCY_COMP_MS = 0; 
-const SCORE_UPLIFT_GAMMA = 0.92;
+const SCORE_UPLIFT_GAMMA = 0.5;
 const AUTO_LATENCY_SAMPLE_MAX_MS = 800;
 const MAX_AUTO_CORRECTION_MS = 600;
 const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
 const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
+const END_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS + 100;
+const END_TAP_BASE_BUFFER_MS = 220;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -101,8 +101,8 @@ const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDurati
 };
 
 const estimateFallbackAutoLatencyMs = (samples) => {
-    const MIN_FALLBACK_SAMPLES = 5;
-    const MIN_FALLBACK_MEDIAN_MS = 20;
+    const MIN_FALLBACK_SAMPLES = 3;
+    const MIN_FALLBACK_MEDIAN_MS = 12;
 
     const filteredDiffs = samples
         .map((sample) => sample.diff)
@@ -156,17 +156,12 @@ const buildAutoLatencySamples = ({ expectedTaps, actualTaps }) => {
             const expectedTap = expectedList[expectedIdx];
             if (!expectedTap) return;
 
-            const nextExpectedTap = expectedList[expectedIdx + 1] || null;
-            const nearestExpectedTap = nextExpectedTap && Math.abs(actualTap.time - nextExpectedTap.time) < Math.abs(actualTap.time - expectedTap.time)
-                ? nextExpectedTap
-                : expectedTap;
-
-            const diff = actualTap.time - nearestExpectedTap.time;
+            const diff = actualTap.time - expectedTap.time;
             if (Math.abs(diff) > AUTO_LATENCY_SAMPLE_MAX_MS) return;
 
             samples.push({
-                trackId: nearestExpectedTap.trackId,
-                baseTime: nearestExpectedTap.baseTime,
+                trackId: expectedTap.trackId,
+                baseTime: expectedTap.baseTime,
                 diff
             });
         });
@@ -190,7 +185,6 @@ export default function PolyrhythmGame() {
     const [expectedTaps, setExpectedTaps] = useState([]);
     const [detailedResults, setDetailedResults] = useState([]);
     const [latencyCompMs, setLatencyCompMs] = useState(DEFAULT_LATENCY_COMP_MS);
-    const [hasManualCalibration, setHasManualCalibration] = useState(false);
     const [lastAutoCorrectionMs, setLastAutoCorrectionMs] = useState(0);
 
     const measureDuration = (60 / bpm) * beatsPerMeasure * 1000;
@@ -222,18 +216,6 @@ export default function PolyrhythmGame() {
     const audioCtxRef = useRef(null);
     const detailedResultsRef = useRef([]); 
     const timeoutsRef = useRef([]); 
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const stored = window.localStorage.getItem(LATENCY_STORAGE_KEY);
-        if (stored !== null) {
-            const parsed = Number(stored);
-            if (Number.isFinite(parsed)) {
-                setLatencyCompMs(clamp(parsed, -MAX_LATENCY_COMP_MS, MAX_LATENCY_COMP_MS));
-                setHasManualCalibration(true);
-            }
-        }
-    }, []);
 
     const addTrack = () => {
         if (tracks.length >= 5) return; 
@@ -332,7 +314,7 @@ export default function PolyrhythmGame() {
         const measureDurationSecs = measureDuration / 1000;
         const audioToPerfOffset = getAudioContextOffset();
     
-        startTimeRef.current = ((now + measureDurationSecs) * 1000) + audioToPerfOffset + latencyCompMs;
+        startTimeRef.current = ((now + measureDurationSecs) * 1000) + audioToPerfOffset;
     
         tracks.forEach((track, index) => {
             const trackFreq = index === 0 ? 1000 : (index === 1 ? 600 : 400); 
@@ -363,9 +345,14 @@ export default function PolyrhythmGame() {
     
         playMetronomeClick(now + measureDurationSecs + measures * measureDurationSecs, 1200);
 
+        const dynamicEndTapGraceMs = Math.max(
+            END_TAP_GRACE_MS,
+            Math.abs(latencyCompMs) + END_TAP_BASE_BUFFER_MS
+        );
+
         timeoutsRef.current.push(setTimeout(() => {
             endGame();
-        }, (startOffset * 1000) + measureDuration + (measureDuration * measures) + 500));
+        }, (startOffset * 1000) + measureDuration + (measureDuration * measures) + dynamicEndTapGraceMs));
     };
 
     const abortGame = () => {
@@ -385,8 +372,13 @@ export default function PolyrhythmGame() {
 
     const calculateScore = () => {
         const expected = expectedTapsRef.current;
-        let autoCorrectionMs = 0;
+        let detectedCorrectionMs = 0;
         const beatDurationMs = measureDuration / Math.max(1, beatsPerMeasure);
+        const currentLatencyCompMs = clamp(
+            normalizeLatencyMs(latencyCompMs, beatDurationMs),
+            MIN_ALLOWED_NEGATIVE_LATENCY_MS,
+            MAX_LATENCY_COMP_MS
+        );
 
         const scoreWithCorrection = (correctionMs) => {
             let totalDeviation = 0;
@@ -462,33 +454,42 @@ export default function PolyrhythmGame() {
             };
         };
 
-        let scoring = scoreWithCorrection(0);
+        let scoring = scoreWithCorrection(currentLatencyCompMs);
 
-        if (!hasManualCalibration) {
-            const matchedResults = buildAutoLatencySamples({
-                expectedTaps: expected,
-                actualTaps: actualTapsRef.current
-            });
-            autoCorrectionMs = estimateAutoLatencyCorrectionMs({
-                matchedResults,
-                tracks,
-                measureDuration
-            });
+        const matchedResults = buildAutoLatencySamples({
+            expectedTaps: expected,
+            actualTaps: actualTapsRef.current
+        });
+        detectedCorrectionMs = estimateAutoLatencyCorrectionMs({
+            matchedResults,
+            tracks,
+            measureDuration
+        });
 
-            if (autoCorrectionMs === 0) {
-                autoCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
-            }
+        if (detectedCorrectionMs === 0) {
+            detectedCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
+        }
 
-            autoCorrectionMs = normalizeLatencyMs(autoCorrectionMs, beatDurationMs);
-            autoCorrectionMs = clamp(autoCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
+        detectedCorrectionMs = clamp(detectedCorrectionMs, -MAX_AUTO_CORRECTION_MS, MAX_AUTO_CORRECTION_MS);
 
-            setLastAutoCorrectionMs(autoCorrectionMs);
+        let residualCorrectionMs = detectedCorrectionMs - currentLatencyCompMs;
 
-            if (autoCorrectionMs !== 0) {
-                scoring = scoreWithCorrection(autoCorrectionMs);
-            }
-        } else {
-            setLastAutoCorrectionMs(0);
+        // Allow large negative residual corrections only when current offset is high,
+        // but never allow the resulting absolute offset to go below the configured minimum.
+        const minResidualCorrectionMs = MIN_ALLOWED_NEGATIVE_LATENCY_MS - currentLatencyCompMs;
+        residualCorrectionMs = clamp(residualCorrectionMs, minResidualCorrectionMs, MAX_AUTO_CORRECTION_MS);
+
+        const updatedLatencyCompMs = clamp(
+            normalizeLatencyMs(currentLatencyCompMs + residualCorrectionMs, beatDurationMs),
+            MIN_ALLOWED_NEGATIVE_LATENCY_MS,
+            MAX_LATENCY_COMP_MS
+        );
+
+        setLastAutoCorrectionMs(detectedCorrectionMs);
+        setLatencyCompMs(updatedLatencyCompMs);
+
+        if (updatedLatencyCompMs !== currentLatencyCompMs) {
+            scoring = scoreWithCorrection(updatedLatencyCompMs);
         }
 
         detailedResultsRef.current = scoring.detailed;
@@ -511,11 +512,6 @@ export default function PolyrhythmGame() {
             if (e.key === 'Escape' && (gameState === 'playing' || gameState === 'countIn')) {
                 e.preventDefault();
                 abortGame();
-                return;
-            }
-
-            if (gameState === 'calibrating') {
-                e.preventDefault();
                 return;
             }
 
@@ -583,38 +579,14 @@ export default function PolyrhythmGame() {
                             updateTrack={updateTrack}
                             removeTrack={removeTrack}
                             startGame={startGame}
-                            onForceCalibrate={() => setGameState('calibrating')}
                             onOpenLatencyTest={() => setGameState('latencyTest')}
                             latencyCompMs={latencyCompMs}
-                            hasManualCalibration={hasManualCalibration}
-                            onResetCalibration={() => {
-                                setLatencyCompMs(DEFAULT_LATENCY_COMP_MS);
-                                setHasManualCalibration(false);
-                                if (typeof window !== 'undefined') {
-                                    window.localStorage.removeItem(LATENCY_STORAGE_KEY);
-                                }
-                            }}
                             bpm={bpm}
                             setBpm={setBpm}
                             measures={measures}
                             setMeasures={setMeasures}
                             beatsPerMeasure={beatsPerMeasure}
                             setBeatsPerMeasure={setBeatsPerMeasure}
-                        />
-                    )}
-
-                    {gameState === 'calibrating' && (
-                        <CalibrationPhase
-                            onCancel={() => setGameState('setup')}
-                            onComplete={(offsetMs) => {
-                                const beatDurationMs = measureDuration / Math.max(1, beatsPerMeasure);
-                                const normalizedOffsetMs = normalizeLatencyMs(offsetMs, beatDurationMs);
-                                const clampedOffsetMs = clamp(normalizedOffsetMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_LATENCY_COMP_MS);
-                                setLatencyCompMs(clampedOffsetMs);
-                                setHasManualCalibration(true);
-                                window.localStorage.setItem(LATENCY_STORAGE_KEY, String(Math.round(clampedOffsetMs)));
-                                setGameState('setup');
-                            }}
                         />
                     )}
 
@@ -646,7 +618,6 @@ export default function PolyrhythmGame() {
                             measureDuration={measureDuration}
                             measures={measures}
                             lastAutoCorrectionMs={lastAutoCorrectionMs}
-                            hasManualCalibration={hasManualCalibration}
                             setGameState={setGameState}
                         />
                     )}

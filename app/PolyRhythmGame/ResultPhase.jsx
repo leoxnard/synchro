@@ -8,7 +8,6 @@ export default function ResultPhase({
     measureDuration,
     measures,
     lastAutoCorrectionMs,
-    hasManualCalibration,
     setGameState
 }) {
     return (
@@ -29,19 +28,17 @@ export default function ResultPhase({
                 <div className="flex gap-6 justify-center">
                     <div>
                         <div className="text-xs text-neutral-500 mb-1">Calibration Mode</div>
-                        <div className={`text-sm font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-amber-300'}`}>
-                            {hasManualCalibration ? 'Manual' : 'Auto-Detect'}
-                        </div>
+                        <div className="text-sm font-bold text-amber-300">Auto-Detect</div>
                     </div>
-                    {!hasManualCalibration && lastAutoCorrectionMs !== 0 && (
+                    {lastAutoCorrectionMs !== 0 && (
                         <div>
                             <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
                             <div className="text-sm font-bold text-stone-300">
-                                {lastAutoCorrectionMs > 0 ? '+' : ''}{lastAutoCorrectionMs}ms
+                                {lastAutoCorrectionMs > 0 ? '+' : ''}{lastAutoCorrectionMs.toFixed(0)}ms
                             </div>
                         </div>
                     )}
-                    {!hasManualCalibration && lastAutoCorrectionMs === 0 && (
+                    {lastAutoCorrectionMs === 0 && (
                         <div>
                             <div className="text-xs text-neutral-500 mb-1">Auto Correction</div>
                             <div className="text-sm font-bold text-neutral-400">None detected</div>

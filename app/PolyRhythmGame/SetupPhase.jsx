@@ -76,11 +76,8 @@ export default function SetupPhase({
     updateTrack,
     removeTrack,
     startGame,
-    onForceCalibrate,
     onOpenLatencyTest,
-    onResetCalibration,
     latencyCompMs,
-    hasManualCalibration,
     bpm,
     setBpm,
     measures,
@@ -96,16 +93,14 @@ export default function SetupPhase({
                     <div className="flex items-center justify-between gap-3 text-xs text-neutral-400">
                         <div className="flex gap-4 justify-center">
                             <div className="flex flex-col items-center">
-                                <span className="text-neutral-500 mb-1">Audio Offset</span>
-                                <span className={`font-bold ${latencyCompMs !== 0 ? (hasManualCalibration ? 'text-cyan-300' : 'text-amber-300') : 'text-neutral-400'}`}>
-                                    {latencyCompMs > 0 ? '+' : ''}{latencyCompMs}ms
+                                <span className="text-neutral-500 mb-1">Last Audio Offset</span>
+                                <span className={`font-bold ${latencyCompMs !== 0 ? 'text-amber-300' : 'text-neutral-400'}`}>
+                                    {latencyCompMs > 0 ? '+' : ''}{latencyCompMs.toFixed(0)}ms
                                 </span>
                             </div>
                             <div className="flex flex-col items-center">
                                 <span className="text-neutral-500 mb-1">Calibration</span>
-                                <span className={`font-bold ${hasManualCalibration ? 'text-cyan-300' : 'text-neutral-400'}`}>
-                                    {hasManualCalibration ? 'Manual' : 'Auto'}
-                                </span>
+                                <span className="font-bold text-neutral-400">Auto</span>
                             </div>
                         </div>
                         <div className="shrink-0 flex gap-2">
@@ -115,13 +110,6 @@ export default function SetupPhase({
                                 className="px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
                             >
                                 Open Test Window
-                            </button>
-                            <button
-                                type="button"
-                                onClick={hasManualCalibration ? onResetCalibration : onForceCalibrate}
-                                className="px-3 py-1.5 rounded-full border border-white/12 bg-white/[0.02] text-[11px] font-semibold tracking-wide text-neutral-400 hover:text-neutral-200 hover:border-white/20 hover:bg-white/[0.05] transition-colors"
-                            >
-                                {hasManualCalibration ? 'Clear Calibration' : 'Run Calibration'}
                             </button>
                         </div>
                     </div>

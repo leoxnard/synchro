@@ -14,20 +14,14 @@ const formatKeyLabel = (key) => {
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
-const findPreviousBeatTime = (beatTimes, eventTime) => {
-    if (beatTimes.length === 0) return null;
-
-    let previous = null;
-    for (let i = 0; i < beatTimes.length; i++) {
-        const beat = beatTimes[i];
-        if (beat <= eventTime) {
-            previous = beat;
-            continue;
-        }
-        break;
+const getNearestGridDeltaMs = (eventTimeMs, anchorTimeMs, beatIntervalMs) => {
+    if (!Number.isFinite(anchorTimeMs) || !Number.isFinite(beatIntervalMs) || beatIntervalMs <= 0) {
+        return 0;
     }
 
-    return previous;
+    const beatsFromAnchor = Math.round((eventTimeMs - anchorTimeMs) / beatIntervalMs);
+    const nearestBeatTime = anchorTimeMs + (beatsFromAnchor * beatIntervalMs);
+    return eventTimeMs - nearestBeatTime;
 };
 
 export default function LatencyTestPhase({ bpm, onClose }) {
@@ -41,6 +35,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
     const rafRef = useRef(null);
     const nextBeatTimeRef = useRef(0);
     const beatTimesRef = useRef([]);
+    const beatGridAnchorPerfRef = useRef(null);
 
     const getAudioContextOffset = useCallback(() => {
         if (!audioCtxRef.current) return performance.now();
@@ -68,6 +63,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
 
         const leadIn = 0.2;
         nextBeatTimeRef.current = ctx.currentTime + leadIn;
+        beatGridAnchorPerfRef.current = getAudioContextOffset() + (nextBeatTimeRef.current * 1000);
 
         const scheduleClick = (whenSeconds) => {
             if (!audioCtxRef.current) return;
@@ -129,8 +125,11 @@ export default function LatencyTestPhase({ bpm, onClose }) {
             setActiveKeys((prev) => ({ ...prev, [key]: true }));
 
             const eventTime = performance.now();
-            const previousBeat = findPreviousBeatTime(beatTimesRef.current, eventTime);
-            const deltaToBeat = previousBeat === null ? 0 : eventTime - previousBeat;
+            const deltaToBeat = getNearestGridDeltaMs(
+                eventTime,
+                beatGridAnchorPerfRef.current,
+                beatIntervalMs
+            );
 
             setInputEvents((prev) => {
                 const next = [
@@ -164,7 +163,7 @@ export default function LatencyTestPhase({ bpm, onClose }) {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, [onClose]);
+    }, [beatIntervalMs, onClose]);
 
     const beatMarkers = useMemo(() => {
         const range = WINDOW_BEFORE_MS + WINDOW_AFTER_MS;
