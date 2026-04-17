@@ -299,9 +299,9 @@ export default function PolyrhythmGame() {
 
     const stopAllAudioNodes = () => {
         activeAudioNodesRef.current.forEach(({ osc, gain }) => {
-            try { osc.stop(); } catch (_) {}
-            try { osc.disconnect(); } catch (_) {}
-            try { gain.disconnect(); } catch (_) {}
+            try { osc.stop(); } catch {}
+            try { osc.disconnect(); } catch {}
+            try { gain.disconnect(); } catch {}
         });
         activeAudioNodesRef.current = [];
     };
@@ -678,7 +678,6 @@ export default function PolyrhythmGame() {
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
                             countInDuration={countInBars * measureDuration}
-                            measures={measures}
                         />
                     )}
 

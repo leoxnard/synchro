@@ -57,8 +57,7 @@ export default function PlayingPhase({
     activeKeys,
     startTime,
     measureDuration,
-    countInDuration,
-    measures
+    countInDuration
 }) {
     const trackCount = tracks.length;
     const extraTracks = Math.max(0, trackCount - 3);

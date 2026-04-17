@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 const MAX_EVENTS = 320;
 const WINDOW_BEFORE_MS = 2000;
 const WINDOW_AFTER_MS = 2000;
-const LOOKAHEAD_SECONDS = 0.15;
 const SCHEDULE_INTERVAL_MS = 25;
 const SCHEDULE_AHEAD_SECONDS = 8;
 const BPM = 60;
@@ -15,7 +14,7 @@ const formatKeyLabel = (key) => {
     return key.toUpperCase();
 };
 
-const getNearestGridDeltaMs = (eventTimeMs, beatTimes, beatIntervalMs) => {
+const getNearestGridDeltaMs = (eventTimeMs, beatTimes) => {
     if (!Number.isFinite(eventTimeMs) || !Array.isArray(beatTimes) || beatTimes.length === 0) {
         return 0;
     }
@@ -54,6 +53,7 @@ export default function LatencyTestPhase({ onClose }) {
     const [inputEvents, setInputEvents] = useState([]);
     const [pressedKeyHistory, setPressedKeyHistory] = useState([]);
     const [activeKeys, setActiveKeys] = useState({});
+    const [beatTimes, setBeatTimes] = useState([]);
 
     const audioCtxRef = useRef(null);
     const schedulerRef = useRef(null);
@@ -66,7 +66,7 @@ export default function LatencyTestPhase({ onClose }) {
         return performance.now() - (audioCtxRef.current.currentTime * 1000);
     }, []);
 
-    const beatIntervalMs = useMemo(() => (60 / Math.max(1, BPM)) * 1000, [BPM]);
+    const beatIntervalMs = (60 / Math.max(1, BPM)) * 1000;
 
     const stopAudio = useCallback(() => {
         if (schedulerRef.current) {
@@ -116,12 +116,15 @@ export default function LatencyTestPhase({ onClose }) {
                     beatTimesRef.current = beatTimesRef.current.slice(-MAX_EVENTS);
                 }
 
+                setBeatTimes([...beatTimesRef.current]);
+
                 scheduleClick(nextBeatTimeRef.current);
                 nextBeatTimeRef.current += beatIntervalMs / 1000;
             }
 
             const cutoff = performance.now() - (WINDOW_BEFORE_MS + 200);
             beatTimesRef.current = beatTimesRef.current.filter((time) => time >= cutoff);
+            setBeatTimes([...beatTimesRef.current]);
         }, SCHEDULE_INTERVAL_MS);
 
         const tick = () => {
@@ -162,8 +165,7 @@ export default function LatencyTestPhase({ onClose }) {
             const eventTime = performance.now();
             const deltaToBeat = getNearestGridDeltaMs(
                 eventTime,
-                beatTimesRef.current,
-                beatIntervalMs
+                beatTimesRef.current
             );
 
             setInputEvents((prev) => {
@@ -202,7 +204,7 @@ export default function LatencyTestPhase({ onClose }) {
 
     const beatMarkers = useMemo(() => {
         const timelineSpanMs = Math.max(WINDOW_BEFORE_MS, WINDOW_AFTER_MS);
-        return beatTimesRef.current
+        return beatTimes
             .map((time, index) => {
                 const deltaMs = time - nowMs;
                 const x = 50 + ((deltaMs / Math.max(1, timelineSpanMs)) * 50);
@@ -212,7 +214,7 @@ export default function LatencyTestPhase({ onClose }) {
                 };
             })
             .filter((item) => item.x >= -2 && item.x <= 102);
-    }, [nowMs]);
+    }, [beatTimes, nowMs]);
 
     const inputMarkers = useMemo(() => {
         const timelineSpanMs = Math.max(WINDOW_BEFORE_MS, WINDOW_AFTER_MS);
