@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-const MAX_EVENTS = 320;
-const WINDOW_BEFORE_MS = 2000;
-const WINDOW_AFTER_MS = 2000;
-const SCHEDULE_INTERVAL_MS = 25;
-const SCHEDULE_AHEAD_SECONDS = 8;
-const BPM = 60;
-const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
+import { 
+    MAX_EVENTS,
+    WINDOW_BEFORE_MS,
+    WINDOW_AFTER_MS,
+    SCHEDULE_INTERVAL_MS,
+    SCHEDULE_AHEAD_SECONDS,
+    BPM,
+    MIN_ALLOWED_NEGATIVE_LATENCY_MS
+} from './constants/gameConfig';
 
 const formatKeyLabel = (key) => {
     if (key === ' ') return 'SPACE';
