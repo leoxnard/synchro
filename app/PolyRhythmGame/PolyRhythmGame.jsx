@@ -11,13 +11,28 @@ const DEFAULT_LATENCY_COMP_MS = 0;
 const AUTO_LATENCY_SAMPLE_MAX_MS = 800;
 const MAX_AUTO_CORRECTION_MS = 600;
 const START_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS;
-const MIN_ALLOWED_NEGATIVE_LATENCY_MS = -10;
+const MIN_ALLOWED_NEGATIVE_LATENCY_MS = 0;
 const END_TAP_GRACE_MS = AUTO_LATENCY_SAMPLE_MAX_MS + 100;
 const END_TAP_BASE_BUFFER_MS = 220;
 const BEAT_ACCENT_TONE_HZ = 1175;
 const BEAT_PULSE_TONE_HZ = 988;
 const RHYTHM_TONES_HZ = [880, 740, 659, 587, 523];
-const MOBILE_LAYOUT_STORAGE_KEY = 'synchro_poly_mobile_layout_v1';
+
+const GAME_TUNING = {
+    input: {
+        dedupWindowMs: 24, // Minimum time between taps to be considered separate
+        recentTrackClaimWindowMs: 45 // How long after a tap the claimed track is protected from being claimed by other taps (for better multi-touch support)
+    },
+    scoring: {
+        beatHitWindowMultiplier: 0.42,
+        extraTapPenaltyWeight: 0.32,
+        timingWeight: 0.80,
+        coverageWeight: 0.14,
+        precisionWeight: 0.06,
+        finalScoreExponent: 0.95,
+        finalScoreScale: 10
+    }
+};
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -179,88 +194,441 @@ const getOrientationFromWindow = () => (
     window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait'
 );
 
-const buildStackedDefaults = (tracks, orientation) => {
-    const total = tracks.length;
-    const isPortrait = orientation === 'portrait';
-    const xBase = isPortrait ? 56 : 54;
-    const yStart = isPortrait ? 20 : 18;
-    const yEnd = isPortrait ? 82 : 82;
 
-    const xOffsetsByCount = {
-        1: [0],
-        2: [0, 0],
-        3: [0, -8, 0],
-        4: [0, -7, -7, 0],
-        5: [0, -5, -10, -5, 0]
+const distanceSquared = (ax, ay, bx, by) => {
+    const dx = ax - bx;
+    const dy = ay - by;
+    return (dx * dx) + (dy * dy);
+};
+
+const getPointCentroid = (points) => {
+    if (!points.length) return { x: 0, y: 0 };
+
+    const totals = points.reduce((accumulator, point) => ({
+        x: accumulator.x + point.x,
+        y: accumulator.y + point.y
+    }), { x: 0, y: 0 });
+
+    return {
+        x: totals.x / points.length,
+        y: totals.y / points.length
     };
-
-    const xOffsets = xOffsetsByCount[total];
-    if (!xOffsets) return null;
-
-    const layout = {};
-    tracks.forEach((track, index) => {
-        const t = total <= 1 ? 0.5 : index / (total - 1);
-        const y = yStart + (t * (yEnd - yStart));
-        const x = xBase + (xOffsets[index] || 0);
-        layout[track.id] = {
-            x: clamp(x, 10, 90),
-            y: clamp(y, 20, 84)
-        };
-    });
-
-    return layout;
 };
 
-const buildDefaultButtonLayout = (tracks, orientation) => {
-    if (!Array.isArray(tracks) || tracks.length === 0) return {};
+const selectInitialClusterCenters = (points, clusterCount) => {
+    if (!points.length || clusterCount <= 0) return [];
 
-    const stackedDefaults = buildStackedDefaults(tracks, orientation);
-    if (stackedDefaults) return stackedDefaults;
+    const centers = [];
+    const selectedIndices = new Set();
+    const centroid = getPointCentroid(points);
 
-    const total = tracks.length;
-    const defaultMap = {};
+    let firstIndex = 0;
+    let smallestDistance = Infinity;
 
-    tracks.forEach((track, index) => {
-        const t = total <= 1 ? 0.5 : index / (total - 1);
-        let x;
-        let y;
+    points.forEach((point, index) => {
+        const dist = distanceSquared(point.x, point.y, centroid.x, centroid.y);
+        if (dist < smallestDistance) {
+            smallestDistance = dist;
+            firstIndex = index;
+        }
+    });
 
-        if (orientation === 'portrait') {
-            x = 28 + (t * 52);
-            y = 68 - (Math.sin(t * Math.PI) * 14) + (t * 6);
-        } else {
-            x = 18 + (t * 64);
-            y = 58 - (Math.sin(t * Math.PI) * 6);
+    centers.push({ ...points[firstIndex] });
+    selectedIndices.add(firstIndex);
+
+    while (centers.length < clusterCount) {
+        let candidateIndex = -1;
+        let candidateDistance = -1;
+
+        points.forEach((point, index) => {
+            if (selectedIndices.has(index)) return;
+
+            const nearestDistance = centers.reduce((nearest, center) => Math.min(
+                nearest,
+                distanceSquared(point.x, point.y, center.x, center.y)
+            ), Infinity);
+
+            if (
+                nearestDistance > candidateDistance ||
+                (nearestDistance === candidateDistance && candidateIndex > index)
+            ) {
+                candidateDistance = nearestDistance;
+                candidateIndex = index;
+            }
+        });
+
+        if (candidateIndex === -1) {
+            centers.push({ ...centers[centers.length - 1] });
+            continue;
         }
 
-        defaultMap[track.id] = {
-            x: clamp(x, 10, 90),
-            y: clamp(y, 20, 84)
-        };
-    });
+        centers.push({ ...points[candidateIndex] });
+        selectedIndices.add(candidateIndex);
+    }
 
-    return defaultMap;
+    return centers;
 };
 
-const normalizeLayoutForTracks = (layoutMap, tracks, orientation) => {
-    const fallback = buildDefaultButtonLayout(tracks, orientation);
-    const normalized = {};
+const runKMeansClustering = (points, clusterCount, maxIterations = 24, epsilon = 0.02) => {
+    if (!points.length || clusterCount <= 0) {
+        return {
+            centers: [],
+            assignments: [],
+            counts: []
+        };
+    }
 
-    tracks.forEach((track) => {
-        const existing = layoutMap?.[track.id];
-        if (!existing || !Number.isFinite(existing.x) || !Number.isFinite(existing.y)) {
-            normalized[track.id] = fallback[track.id];
-            return;
+    const usableClusterCount = Math.min(clusterCount, points.length);
+    let centers = selectInitialClusterCenters(points, usableClusterCount);
+    let assignments = new Array(points.length).fill(0);
+
+    for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+        let changedAssignments = false;
+
+        points.forEach((point, pointIndex) => {
+            let closestCluster = 0;
+            let closestDistance = Infinity;
+
+            centers.forEach((center, clusterIndex) => {
+                const currentDistance = distanceSquared(point.x, point.y, center.x, center.y);
+                if (currentDistance < closestDistance) {
+                    closestDistance = currentDistance;
+                    closestCluster = clusterIndex;
+                }
+            });
+
+            if (assignments[pointIndex] !== closestCluster) {
+                assignments[pointIndex] = closestCluster;
+                changedAssignments = true;
+            }
+        });
+
+        const nextCenters = centers.map((center, clusterIndex) => {
+            const clusterPoints = points.filter((_, pointIndex) => assignments[pointIndex] === clusterIndex);
+            if (clusterPoints.length === 0) {
+                return null;
+            }
+
+            const totals = clusterPoints.reduce((accumulator, point) => ({
+                x: accumulator.x + point.x,
+                y: accumulator.y + point.y
+            }), { x: 0, y: 0 });
+
+            return {
+                x: totals.x / clusterPoints.length,
+                y: totals.y / clusterPoints.length
+            };
+        });
+
+        const emptyClusters = nextCenters
+            .map((center, clusterIndex) => (center === null ? clusterIndex : null))
+            .filter((clusterIndex) => clusterIndex !== null);
+
+        if (emptyClusters.length > 0) {
+            const occupiedCenters = nextCenters.filter(Boolean);
+
+            emptyClusters.forEach((clusterIndex) => {
+                let replacementIndex = 0;
+                let furthestDistance = -1;
+
+                points.forEach((point, pointIndex) => {
+                    if (assignments[pointIndex] === clusterIndex) return;
+
+                    const nearestDistance = occupiedCenters.length > 0
+                        ? occupiedCenters.reduce((nearest, center) => Math.min(
+                            nearest,
+                            distanceSquared(point.x, point.y, center.x, center.y)
+                        ), Infinity)
+                        : 0;
+
+                    if (nearestDistance > furthestDistance) {
+                        furthestDistance = nearestDistance;
+                        replacementIndex = pointIndex;
+                    }
+                });
+
+                nextCenters[clusterIndex] = { ...points[replacementIndex] };
+            });
         }
 
-        normalized[track.id] = {
-            x: clamp(existing.x, 10, 90),
-            y: clamp(existing.y, 20, 84)
+        const centerShift = nextCenters.reduce((largestShift, center, clusterIndex) => {
+            if (!center || !centers[clusterIndex]) return largestShift;
+
+            return Math.max(
+                largestShift,
+                Math.sqrt(distanceSquared(
+                    centers[clusterIndex].x,
+                    centers[clusterIndex].y,
+                    center.x,
+                    center.y
+                ))
+            );
+        }, 0);
+
+        centers = nextCenters.map((center) => center || { ...points[0] });
+
+        if (!changedAssignments || centerShift <= epsilon) {
+            break;
+        }
+    }
+
+    const counts = new Array(centers.length).fill(0);
+    assignments.forEach((clusterIndex) => {
+        counts[clusterIndex] = (counts[clusterIndex] || 0) + 1;
+    });
+
+    return {
+        centers,
+        assignments,
+        counts
+    };
+};
+
+const buildClusterTrackMatrix = ({ clusterEntries, expectedTaps, tracks, measureDuration }) => {
+    return clusterEntries.map((clusterEntry) => tracks.map((track) => {
+        const expectedCount = expectedTaps.filter(e => e.trackId === track.id).length || 1;
+        const pulseDuration = measureDuration / Math.max(1, track.pulses || 1);
+        const baseToleranceMs = Math.max(35, pulseDuration * 0.35); // Leicht erhöhte Toleranz
+
+        let bestF1Score = 0;
+        let bestAvgErrorMs = Infinity;
+        let bestInToleranceCount = 0;
+
+        const testShifts = [-250, -150, -75, 0, 75, 150, 250];
+
+        testShifts.forEach(shiftMs => {
+            let inToleranceCount = 0;
+            let fitSum = 0;
+            let errorSum = 0;
+
+            clusterEntry.taps.forEach((tap) => {
+                const adjustedTime = tap.time - shiftMs;
+                const timeInMeasure = ((adjustedTime % measureDuration) + measureDuration) % measureDuration;
+                const phaseInPulse = timeInMeasure % pulseDuration;
+                const distanceToPulse = Math.min(phaseInPulse, pulseDuration - phaseInPulse);
+
+                errorSum += distanceToPulse;
+                if (distanceToPulse <= baseToleranceMs) {
+                    inToleranceCount += 1;
+                    fitSum += 1 - (distanceToPulse / baseToleranceMs);
+                }
+            });
+
+            const tapCount = clusterEntry.taps.length || 1;
+            const precisionFit = fitSum / tapCount;
+            const recallFit = fitSum / expectedCount;
+            const f1Score = (precisionFit + recallFit > 0)
+                ? (2 * precisionFit * recallFit) / (precisionFit + recallFit)
+                : 0;
+            const avgErrorMs = errorSum / tapCount;
+
+            if (f1Score > bestF1Score || (f1Score === bestF1Score && avgErrorMs < bestAvgErrorMs)) {
+                bestF1Score = f1Score;
+                bestAvgErrorMs = avgErrorMs;
+                bestInToleranceCount = inToleranceCount;
+            }
+        });
+
+        const tapCount = clusterEntry.taps.length || 1;
+        return {
+            trackId: track.id,
+            trackKey: track.key || '',
+            inToleranceCount: bestInToleranceCount,
+            hitRatio: bestInToleranceCount / tapCount,
+            rhythmFit: bestF1Score,
+            avgErrorMs: bestAvgErrorMs,
+            score: bestF1Score
+        };
+    }));
+};
+
+const mapClustersToTracksBySupport = ({ clusterEntries, expectedTaps, tracks, measureDuration }) => {
+    if (!clusterEntries.length || !tracks.length) {
+        return {
+            clusterToTrack: new Map(),
+            matrix: [],
+            orderedClusters: [],
+            bestScore: -Infinity,
+            evaluatedAssignments: []
+        };
+    }
+
+    const activeClusterEntries = clusterEntries.filter((entry) => entry.taps.length > 0);
+    if (activeClusterEntries.length === 0) {
+        return {
+            clusterToTrack: new Map(),
+            matrix: [],
+            orderedClusters: [],
+            bestScore: -Infinity,
+            evaluatedAssignments: []
+        };
+    }
+
+    const orderedClusters = [...activeClusterEntries].sort((left, right) => left.index - right.index);
+
+    const scoreTable = buildClusterTrackMatrix({
+        clusterEntries: orderedClusters,
+        expectedTaps,
+        tracks,
+        measureDuration
+    });
+    const assignedClusters = new Set();
+    const assignedTracks = new Set();
+    const assignment = new Map();
+    const selectedPairs = [];
+    let bestScore = 0;
+
+    while (assignedClusters.size < orderedClusters.length && assignedTracks.size < tracks.length) {
+        let bestCandidate = null;
+
+        for (let clusterPosition = 0; clusterPosition < orderedClusters.length; clusterPosition += 1) {
+            if (assignedClusters.has(clusterPosition)) continue;
+
+            for (let trackIndex = 0; trackIndex < tracks.length; trackIndex += 1) {
+                if (assignedTracks.has(trackIndex)) continue;
+
+                const cell = scoreTable[clusterPosition]?.[trackIndex];
+                if (!cell || !Number.isFinite(cell.score)) continue;
+
+                if (!bestCandidate || cell.score > bestCandidate.score) {
+                    bestCandidate = {
+                        clusterPosition,
+                        trackIndex,
+                        score: cell.score,
+                        inToleranceCount: cell.inToleranceCount,
+                        avgErrorMs: cell.avgErrorMs
+                    };
+                    continue;
+                }
+
+                if (cell.score === bestCandidate.score) {
+                    const betterSupport = (cell.inToleranceCount || 0) > (bestCandidate.inToleranceCount || 0);
+                    const betterTiming = Number.isFinite(cell.avgErrorMs)
+                        && Number.isFinite(bestCandidate.avgErrorMs)
+                        && cell.avgErrorMs < bestCandidate.avgErrorMs;
+                    const betterClusterOrder = clusterPosition < bestCandidate.clusterPosition;
+                    const betterTrackOrder = trackIndex < bestCandidate.trackIndex;
+                    if (betterSupport || betterTiming || ((cell.inToleranceCount === bestCandidate.inToleranceCount) && (betterClusterOrder || betterTrackOrder))) {
+                        bestCandidate = {
+                            clusterPosition,
+                            trackIndex,
+                            score: cell.score,
+                            inToleranceCount: cell.inToleranceCount,
+                            avgErrorMs: cell.avgErrorMs
+                        };
+                    }
+                }
+            }
+        }
+
+        if (!bestCandidate) break;
+
+        const cluster = orderedClusters[bestCandidate.clusterPosition];
+        const track = tracks[bestCandidate.trackIndex];
+        assignment.set(cluster.index, {
+            trackId: track.id,
+            trackKey: track.key || ''
+        });
+
+        assignedClusters.add(bestCandidate.clusterPosition);
+        assignedTracks.add(bestCandidate.trackIndex);
+        selectedPairs.push(bestCandidate);
+        bestScore += bestCandidate.score;
+    }
+
+    return {
+        clusterToTrack: assignment,
+        matrix: scoreTable,
+        orderedClusters,
+        bestScore,
+        evaluatedAssignments: selectedPairs
+    };
+};
+
+const clusterMobileTapsForScoring = (actualTaps, expectedTaps, tracks, measureDuration) => {
+    const mobileEntries = [];
+
+    actualTaps.forEach((tap, index) => {
+        if (Number.isFinite(tap.tapX) && Number.isFinite(tap.tapY)) {
+            mobileEntries.push({
+                ...tap,
+                sourceIndex: index,
+                x: tap.tapX,
+                y: tap.tapY
+            });
+        }
+    });
+
+    if (mobileEntries.length === 0 || tracks.length === 0) {
+        return {
+            taps: actualTaps,
+            debug: {
+                mobileEntries,
+                centers: [],
+                assignments: [],
+                clusterEntries: [],
+                clusterToTrack: new Map(),
+                trackLayout: {}
+            }
+        };
+    }
+
+    const clusterCount = Math.min(tracks.length, mobileEntries.length);
+    const points = mobileEntries.map((entry) => ({ x: entry.x, y: entry.y }));
+    const { centers, assignments } = runKMeansClustering(points, clusterCount);
+    const clusterEntries = centers.map((center, clusterIndex) => ({
+        index: clusterIndex,
+        center,
+        taps: mobileEntries.filter((_, mobileEntryIndex) => assignments[mobileEntryIndex] === clusterIndex)
+    }));
+
+    const mappingResult = mapClustersToTracksBySupport({
+        clusterEntries,
+        expectedTaps,
+        tracks,
+        measureDuration
+    });
+    const clusterToTrack = mappingResult.clusterToTrack;
+
+    const clusteredTaps = actualTaps.map((tap, index) => {
+        if (!Number.isFinite(tap.tapX) || !Number.isFinite(tap.tapY)) {
+            return tap;
+        }
+
+        const mobileEntryIndex = mobileEntries.findIndex((entry) => entry.sourceIndex === index);
+        if (mobileEntryIndex === -1) return tap;
+
+        const clusterIndex = assignments[mobileEntryIndex];
+        const mappedTrack = clusterToTrack.get(clusterIndex);
+        if (!mappedTrack) return tap;
+
+        return {
+            ...tap,
+            originalKey: tap.originalKey || tap.key,
+            key: mappedTrack.trackKey,
+            clusterIndex,
+            clusterTrackId: mappedTrack.trackId
         };
     });
 
-    return normalized;
+    return {
+        taps: clusteredTaps,
+        debug: {
+            mobileEntries,
+            centers,
+            assignments,
+            clusterEntries,
+            clusterToTrack,
+            matrix: mappingResult.matrix,
+            orderedClusters: mappingResult.orderedClusters,
+            bestScore: mappingResult.bestScore,
+            evaluatedAssignments: mappingResult.evaluatedAssignments,
+            trackLayout: {}
+        }
+    };
 };
+
+// ==================== MOBILE FREE-TAP CAPTURE ====================
 
 export default function PolyrhythmGame() {
     const [gameState, setGameState] = useState('setup'); 
@@ -279,17 +647,12 @@ export default function PolyrhythmGame() {
     const [detailedResults, setDetailedResults] = useState([]);
     const [latencyCompMs, setLatencyCompMs] = useState(DEFAULT_LATENCY_COMP_MS);
     const [lastAutoCorrectionMs, setLastAutoCorrectionMs] = useState(0);
+    const [debugAnalysis, setDebugAnalysis] = useState(null);
     const [isClientReady, setIsClientReady] = useState(false);
     const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [orientation, setOrientation] = useState('portrait');
-    const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false);
-    const [mobileButtonLayouts, setMobileButtonLayouts] = useState({ portrait: {}, landscape: {} });
     const isGameplayActive = gameState === 'countIn' || gameState === 'playing';
     const isMobileLayoutEnabled = isClientReady && isTouchPreferred;
-    const isMobileLayoutEditorActive = isMobileLayoutEnabled && gameState === 'setup' && isLayoutEditorOpen;
-    const activeButtonLayout = orientation === 'landscape'
-        ? mobileButtonLayouts.landscape
-        : mobileButtonLayouts.portrait;
 
     const measureDuration = (60 / bpm) * beatsPerMeasure * 1000;
     const extraTracks = Math.max(0, tracks.length - 3);
@@ -298,7 +661,7 @@ export default function PolyrhythmGame() {
     const playingRowWidthPx = (tracks.length * circleSizePx) + (Math.max(0, tracks.length - 1) * gapPx);
     const inGameWidthRem = Math.max(31, (playingRowWidthPx + 84) / 16);
     const clampedInGameWidthRem = Math.min(inGameWidthRem, 46);
-    const windowTargetWidth = (gameState === 'setup' && !isLayoutEditorOpen)
+    const windowTargetWidth = gameState === 'setup'
         ? '31rem'
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
     const windowMinHeight = isMobileLayoutEnabled
@@ -331,36 +694,11 @@ export default function PolyrhythmGame() {
     const keyPressCountRef = useRef(new Map());
     const touchFallbackPressIdRef = useRef(0);
     const lastTouchInteractionAtRef = useRef(0);
+    const recentMobileTapSignatureRef = useRef([]);
 
     const supportsPointerEvents = () => (
         typeof window !== 'undefined' && 'PointerEvent' in window
     );
-
-    const updateActiveOrientationLayoutPosition = (trackId, x, y) => {
-        setMobileButtonLayouts((prev) => {
-            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
-            return {
-                ...prev,
-                [key]: {
-                    ...prev[key],
-                    [trackId]: {
-                        x: clamp(x, 2, 98),
-                        y: clamp(y, 2, 98)
-                    }
-                }
-            };
-        });
-    };
-
-    const resetActiveOrientationLayout = () => {
-        setMobileButtonLayouts((prev) => {
-            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
-            return {
-                ...prev,
-                [key]: buildDefaultButtonLayout(tracks, key)
-            };
-        });
-    };
 
     const normalizeInputKey = (key) => {
         if (typeof key !== 'string') return '';
@@ -373,6 +711,23 @@ export default function PolyrhythmGame() {
         activePointerToKeyRef.current.clear();
         keyPressCountRef.current.clear();
         setActiveKeys({});
+    };
+
+    const isLikelyDuplicateMobileTap = (tapXPct, tapYPct, tapTimeMs) => {
+        const DUPLICATE_TIME_WINDOW_MS = 120;
+        const DUPLICATE_DISTANCE_PCT = 2.5;
+
+        return recentMobileTapSignatureRef.current.some((signature) => (
+            Math.abs(signature.timeMs - tapTimeMs) <= DUPLICATE_TIME_WINDOW_MS
+            && Math.sqrt(distanceSquared(signature.x, signature.y, tapXPct, tapYPct)) <= DUPLICATE_DISTANCE_PCT
+        ));
+    };
+
+    const rememberMobileTapSignature = (tapXPct, tapYPct, tapTimeMs) => {
+        recentMobileTapSignatureRef.current.push({ x: tapXPct, y: tapYPct, timeMs: tapTimeMs });
+        recentMobileTapSignatureRef.current = recentMobileTapSignatureRef.current.filter((signature) => (
+            tapTimeMs - signature.timeMs <= 120
+        ));
     };
 
     const setKeyPressedState = (key, isPressed) => {
@@ -400,7 +755,7 @@ export default function PolyrhythmGame() {
         });
     };
 
-    const registerTapForKey = (rawKey) => {
+    const registerTapForKey = (rawKey, tapData = null) => {
         const key = normalizeInputKey(rawKey);
         if (!key) return false;
 
@@ -414,14 +769,29 @@ export default function PolyrhythmGame() {
         const pressTime = performance.now() - startTimeRef.current;
         if (gameState !== 'playing' && pressTime < -START_TAP_GRACE_MS) return false;
 
-        actualTapsRef.current.push({ key, time: pressTime });
+        // Deduplication: check if an identical tap (same key) was registered within the configured window.
+        const DEDUP_WINDOW_MS = GAME_TUNING.input.dedupWindowMs;
+        const recentSameKeyTap = actualTapsRef.current.find(
+            (tap) => tap.key === key && Math.abs(tap.time - pressTime) < DEDUP_WINDOW_MS
+        );
+
+        if (recentSameKeyTap) {
+            // Duplicate detected, skip it
+            return false;
+        }
+
+        actualTapsRef.current.push({
+            key,
+            time: pressTime,
+            ...(tapData || {})
+        });
         return true;
     };
 
     const handleInputDown = (rawKey, options = {}) => {
-        const { releaseAfterMs } = options;
+        const { releaseAfterMs, tapData = null } = options;
         const key = normalizeInputKey(rawKey);
-        if (!registerTapForKey(key)) return false;
+        if (!registerTapForKey(key, tapData)) return false;
 
         setKeyPressedState(key, true);
 
@@ -440,22 +810,16 @@ export default function PolyrhythmGame() {
         setKeyPressedState(key, false);
     };
 
-    const beginTrackPress = ({ trackKey, pointerId, eventTarget }) => {
+    const beginTrackPress = ({ trackKey, pointerId, tapData = null }) => {
         if (gameState !== 'playing' && gameState !== 'countIn') return false;
         if (pointerId == null) return false;
         if (activePointerToKeyRef.current.has(pointerId)) return false;
 
         const normalizedTrackKey = normalizeInputKey(trackKey);
         if (!normalizedTrackKey) return false;
-        if (!handleInputDown(normalizedTrackKey)) return false;
+        if (!handleInputDown(normalizedTrackKey, { tapData })) return false;
 
         activePointerToKeyRef.current.set(pointerId, normalizedTrackKey);
-
-        if (eventTarget && typeof eventTarget.setPointerCapture === 'function' && typeof pointerId === 'number') {
-            try {
-                eventTarget.setPointerCapture(pointerId);
-            } catch {}
-        }
 
         return true;
     };
@@ -467,10 +831,10 @@ export default function PolyrhythmGame() {
 
     const handleTrackPointerDown = (event, trackKey) => {
         event.preventDefault();
+        event.stopPropagation();
         beginTrackPress({
             trackKey,
-            pointerId: event.pointerId,
-            eventTarget: event.currentTarget
+            pointerId: event.pointerId
         });
     };
 
@@ -484,10 +848,54 @@ export default function PolyrhythmGame() {
 
     const handleTrackPointerUp = (event) => {
         event.preventDefault();
+        event.stopPropagation();
         endTrackPress(event.pointerId);
     };
 
     const handleTrackTouchStart = (event, trackKey) => {
+        if (supportsPointerEvents()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        lastTouchInteractionAtRef.current = Date.now();
+        const changedTouches = event.changedTouches || [];
+
+        for (let i = 0; i < changedTouches.length; i += 1) {
+            const touch = changedTouches[i];
+            beginTrackPress({
+                trackKey,
+                pointerId: `touch-${touch.identifier}`
+            });
+        }
+    };
+
+    const processMobileFreeTapPoint = ({ clientX, clientY, eventTarget }) => {
+        const playingSurface = eventTarget;
+        const rect = playingSurface?.getBoundingClientRect?.();
+        if (!rect || rect.width === 0 || rect.height === 0) return;
+
+        const tapTimeMs = performance.now() - startTimeRef.current;
+
+        const relativeX = clientX - rect.left;
+        const relativeY = clientY - rect.top;
+        const tapXPct = (relativeX / rect.width) * 100;
+        const tapYPct = (relativeY / rect.height) * 100;
+
+        if (isLikelyDuplicateMobileTap(tapXPct, tapYPct, tapTimeMs)) return;
+
+        actualTapsRef.current.push({
+            time: tapTimeMs,
+            tapX: tapXPct,
+            tapY: tapYPct,
+            source: 'mobile-free-tap'
+        });
+
+        rememberMobileTapSignature(tapXPct, tapYPct, tapTimeMs);
+    };
+
+    const handleMobileFreeTapTouchStart = (event) => {
+        if (!isMobileLayoutEnabled) return; 
+        if (gameState !== 'playing' && gameState !== 'countIn') return;
+
         if (supportsPointerEvents()) return;
 
         event.preventDefault();
@@ -496,18 +904,30 @@ export default function PolyrhythmGame() {
 
         for (let i = 0; i < changedTouches.length; i += 1) {
             const touch = changedTouches[i];
-            beginTrackPress({
-                trackKey,
-                pointerId: `touch-${touch.identifier}`,
+            processMobileFreeTapPoint({
+                clientX: touch.clientX,
+                clientY: touch.clientY,
                 eventTarget: event.currentTarget
             });
         }
     };
 
-    const handleTrackTouchEnd = (event) => {
-        if (supportsPointerEvents()) return;
+    const handleMobileFreeTapPointerDown = (event) => {
+        if (!isMobileLayoutEnabled) return;
+        if (gameState !== 'playing' && gameState !== 'countIn') return;
 
         event.preventDefault();
+        processMobileFreeTapPoint({
+            clientX: event.clientX,
+            clientY: event.clientY,
+            eventTarget: event.currentTarget
+        });
+    };
+
+    const handleTrackTouchEnd = (event) => {
+        if (supportsPointerEvents()) return;
+        event.preventDefault();
+        event.stopPropagation();
         lastTouchInteractionAtRef.current = Date.now();
         const changedTouches = event.changedTouches || [];
 
@@ -517,15 +937,33 @@ export default function PolyrhythmGame() {
         }
     };
 
+    // Mobile free-tap touch end handler
+    const handleMobileFreeTapTouchEnd = (event) => {
+        if (!isMobileLayoutEnabled) return;
+        
+        if (supportsPointerEvents()) return;
+
+        event.preventDefault();
+        lastTouchInteractionAtRef.current = Date.now();
+        const changedTouches = event.changedTouches || [];
+
+        for (let i = 0; i < changedTouches.length; i += 1) {
+            const touch = changedTouches[i];
+            endTrackPress(`touch-free-${touch.identifier}`);
+        }
+    };
+
+    const handleMobileFreeTapPointerUp = (event) => {
+        if (!isMobileLayoutEnabled) return;
+        endTrackPress(`pointer-free-${event.pointerId}`);
+    };
+
     const handleTrackClick = (event, trackKey) => {
         event.preventDefault();
         if (gameState !== 'playing' && gameState !== 'countIn') return;
 
-        // Mobile browsers can emit a synthetic click right after a touch sequence.
-        // Ignore those so taps are not counted twice and scores stay comparable.
         if (Date.now() - lastTouchInteractionAtRef.current < 700) return;
 
-        // Click fallback is only needed on browsers without pointer events.
         if (supportsPointerEvents()) return;
 
         const pointerId = `tap-${touchFallbackPressIdRef.current}`;
@@ -548,13 +986,6 @@ export default function PolyrhythmGame() {
             ...t,
             key: defaultKeys[index] || t.key
         }));
-        setMobileButtonLayouts((prev) => {
-            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
-            return {
-                ...prev,
-                [key]: buildDefaultButtonLayout(newTracks, key)
-            };
-        });
         setTracks(newTracks);
     };
 
@@ -573,13 +1004,6 @@ export default function PolyrhythmGame() {
                 key: defaultKeys[index] || t.key
             }));
             setTracks(newTracks);
-            setMobileButtonLayouts((prev) => {
-                const key = orientation === 'landscape' ? 'landscape' : 'portrait';
-                return {
-                    ...prev,
-                    [key]: buildDefaultButtonLayout(newTracks, key)
-                };
-            });
         }
     };
 
@@ -683,9 +1107,9 @@ export default function PolyrhythmGame() {
         expectedTapsRef.current = nextExpectedTaps;
         setExpectedTaps(nextExpectedTaps);
         actualTapsRef.current = [];
+        setDebugAnalysis(null);
 
         const countInTotalBeats = Math.max(1, countInBars * beatsPerMeasure);
-        setIsLayoutEditorOpen(false);
         setGameState('countIn');
         setCount(countInTotalBeats); 
     
@@ -776,8 +1200,9 @@ export default function PolyrhythmGame() {
         }
         actualTapsRef.current = [];
         expectedTapsRef.current = [];
+        recentMobileTapSignatureRef.current = [];
+        setDebugAnalysis(null);
         clearInputVisualState();
-        setIsLayoutEditorOpen(false);
         setGameState('setup');
     };
 
@@ -788,29 +1213,40 @@ export default function PolyrhythmGame() {
 
     const calculateScore = () => {
         const expected = expectedTapsRef.current;
-        let detectedCorrectionMs = 0;
         const beatDurationMs = measureDuration / Math.max(1, beatsPerMeasure);
         const currentLatencyCompMs = clamp(
             normalizeLatencyMs(latencyCompMs, beatDurationMs),
             MIN_ALLOWED_NEGATIVE_LATENCY_MS,
             MAX_LATENCY_COMP_MS
         );
+        const hasSpatialTapData = actualTapsRef.current.some((tap) => (
+            Number.isFinite(tap.tapX) && Number.isFinite(tap.tapY)
+        ));
+        const shouldUseClusterMapping = isMobileLayoutEnabled || hasSpatialTapData;
+
+        const clusteringResult = shouldUseClusterMapping
+            ? clusterMobileTapsForScoring(actualTapsRef.current, expected, tracks, measureDuration)
+            : { taps: actualTapsRef.current, debug: null };
+        const scoringActualTaps = clusteringResult.taps;
 
         const scoreWithCorrection = (correctionMs) => {
             let totalDeviation = 0;
             let maxAllowedDeviation = 0;
-            const availableActualTaps = [...actualTapsRef.current];
+            const availableActualTaps = [...scoringActualTaps];
             const detailed = [];
+            let matchedCount = 0;
+            let missedCount = 0;
 
             expected.forEach(exp => {
                 const track = tracks.find(t => t.id === exp.trackId);
-                const maxErrorForBeat = (measureDuration / track.pulses) / 2;
+                const maxErrorForBeat = (measureDuration / track.pulses) * GAME_TUNING.scoring.beatHitWindowMultiplier;
                 maxAllowedDeviation += maxErrorForBeat;
 
                 const matchingTaps = availableActualTaps.filter(act => act.key === exp.key);
 
                 if (matchingTaps.length === 0) {
                     totalDeviation += maxErrorForBeat;
+                    missedCount += 1;
                     detailed.push({ ...exp, actualTime: null, diff: null });
                     return;
                 }
@@ -826,6 +1262,7 @@ export default function PolyrhythmGame() {
 
                 if (absCorrectedDiff <= maxErrorForBeat) {
                     totalDeviation += absCorrectedDiff;
+                    matchedCount += 1;
                     detailed.push({
                         ...exp,
                         actualTime: closestTap.time,
@@ -838,13 +1275,35 @@ export default function PolyrhythmGame() {
                     }
                 } else {
                     totalDeviation += maxErrorForBeat;
+                    missedCount += 1;
                     detailed.push({ ...exp, actualTime: null, diff: null });
                 }
             });
 
-            const extraTaps = availableActualTaps.filter(act => tracks.some(t => t.key === act.key));
+            const extraTaps = availableActualTaps.filter(act => {
+                const lastExpectedTime = expected.length > 0 
+                    ? Math.max(...expected.map(e => e.time))
+                    : 0;
+                
+                if (act.time > lastExpectedTime && act.time <= lastExpectedTime + END_TAP_GRACE_MS) {
+                    return false;
+                }
+                
+                const track = tracks.find(t => t.key === act.key);
+                if (track) {
+                    const maxErrorForBeat = (measureDuration / track.pulses) * GAME_TUNING.scoring.beatHitWindowMultiplier;
+                    
+                    if (act.time < -maxErrorForBeat) {
+                        return false; 
+                    }
+                }
+                
+                return tracks.some(t => t.key === act.key);
+            });
+
             const avgMaxError = expected.length > 0 ? (maxAllowedDeviation / expected.length) : 200;
-            totalDeviation += extraTaps.length * (avgMaxError / 2);
+            const extraTapPenaltyWeight = GAME_TUNING.scoring.extraTapPenaltyWeight;
+            totalDeviation += extraTaps.length * (avgMaxError * extraTapPenaltyWeight);
 
             extraTaps.forEach(act => {
                 const track = tracks.find(t => t.key === act.key);
@@ -866,65 +1325,115 @@ export default function PolyrhythmGame() {
             return {
                 totalDeviation,
                 maxAllowedDeviation,
-                detailed
+                detailed,
+                matchedCount,
+                missedCount,
+                extraCount: extraTaps.length
             };
         };
 
-        let scoring = scoreWithCorrection(currentLatencyCompMs);
-
         const matchedResults = buildAutoLatencySamples({
             expectedTaps: expected,
-            actualTaps: actualTapsRef.current
+            actualTaps: scoringActualTaps
         });
-        detectedCorrectionMs = estimateAutoLatencyCorrectionMs({
+
+        const candidateCorrections = new Set();
+        candidateCorrections.add(currentLatencyCompMs);
+        candidateCorrections.add(0);
+
+        const hintCorrectionMs = estimateAutoLatencyCorrectionMs({
             matchedResults,
             tracks,
             measureDuration
         });
-
-        if (detectedCorrectionMs === 0) {
-            detectedCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
+        if (Number.isFinite(hintCorrectionMs)) {
+            candidateCorrections.add(clamp(hintCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS));
         }
 
-        detectedCorrectionMs = clamp(detectedCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS);
+        const fallbackCorrectionMs = estimateFallbackAutoLatencyMs(matchedResults);
+        if (Number.isFinite(fallbackCorrectionMs)) {
+            candidateCorrections.add(clamp(fallbackCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS));
+        }
 
-        let residualCorrectionMs = detectedCorrectionMs - currentLatencyCompMs;
+        for (let correction = MIN_ALLOWED_NEGATIVE_LATENCY_MS; correction <= MAX_AUTO_CORRECTION_MS; correction += 5) {
+            candidateCorrections.add(correction);
+        }
 
-        const minResidualCorrectionMs = MIN_ALLOWED_NEGATIVE_LATENCY_MS - currentLatencyCompMs;
-        residualCorrectionMs = clamp(residualCorrectionMs, minResidualCorrectionMs, MAX_AUTO_CORRECTION_MS);
+        let bestScoring = null;
+        let bestCorrectionMs = currentLatencyCompMs;
+        let bestFinalScore = -Infinity;
 
-        const updatedLatencyCompMs = clamp(
-            normalizeLatencyMs(currentLatencyCompMs + residualCorrectionMs, beatDurationMs),
-            MIN_ALLOWED_NEGATIVE_LATENCY_MS,
-            MAX_LATENCY_COMP_MS
-        );
+        candidateCorrections.forEach((candidateCorrectionMs) => {
+            const normalizedCandidateCorrectionMs = clamp(
+                normalizeLatencyMs(candidateCorrectionMs, beatDurationMs),
+                MIN_ALLOWED_NEGATIVE_LATENCY_MS,
+                MAX_LATENCY_COMP_MS
+            );
 
-        setLastAutoCorrectionMs(detectedCorrectionMs);
+            const candidateScoring = scoreWithCorrection(normalizedCandidateCorrectionMs);
+            const timingQuality = candidateScoring.maxAllowedDeviation > 0
+                ? 1 - (candidateScoring.totalDeviation / candidateScoring.maxAllowedDeviation)
+                : 0;
+            const coverage = expected.length > 0 ? candidateScoring.matchedCount / expected.length : 0;
+            const precision = (candidateScoring.matchedCount + candidateScoring.extraCount) > 0
+                ? candidateScoring.matchedCount / (candidateScoring.matchedCount + candidateScoring.extraCount)
+                : 0;
+
+            const blendedQuality =
+                (clamp(timingQuality, 0, 1) * GAME_TUNING.scoring.timingWeight) +
+                (clamp(coverage, 0, 1) * GAME_TUNING.scoring.coverageWeight) +
+                (clamp(precision, 0, 1) * GAME_TUNING.scoring.precisionWeight);
+            const candidateFinalScore = Math.pow(clamp(blendedQuality, 0, 1), GAME_TUNING.scoring.finalScoreExponent) * GAME_TUNING.scoring.finalScoreScale;
+
+            const isBetterScore = candidateFinalScore > bestFinalScore + 0.0001;
+            const isSameScoreButCloser = Math.abs(candidateFinalScore - bestFinalScore) <= 0.0001
+                && Math.abs(normalizedCandidateCorrectionMs - currentLatencyCompMs) < Math.abs(bestCorrectionMs - currentLatencyCompMs);
+
+            if (isBetterScore || isSameScoreButCloser) {
+                bestFinalScore = candidateFinalScore;
+                bestCorrectionMs = normalizedCandidateCorrectionMs;
+                bestScoring = candidateScoring;
+            }
+        });
+
+        const updatedLatencyCompMs = bestCorrectionMs;
+        setLastAutoCorrectionMs(updatedLatencyCompMs - currentLatencyCompMs);
         setLatencyCompMs(updatedLatencyCompMs);
 
-        if (updatedLatencyCompMs !== currentLatencyCompMs) {
-            scoring = scoreWithCorrection(updatedLatencyCompMs);
-        }
+        let scoring = bestScoring || scoreWithCorrection(updatedLatencyCompMs);
 
         detailedResultsRef.current = scoring.detailed;
         setDetailedResults(scoring.detailed);
+        setDebugAnalysis({
+            isMobile: shouldUseClusterMapping,
+            rawTaps: actualTapsRef.current,
+            clusteredTaps: scoringActualTaps,
+            clustering: clusteringResult.debug,
+            currentLatencyCompMs,
+            selectedLatencyCompMs: updatedLatencyCompMs,
+            lastAutoCorrectionMs: updatedLatencyCompMs - currentLatencyCompMs,
+            candidateCorrections: [...candidateCorrections].sort((left, right) => left - right),
+            expectedTaps: expected
+        });
 
-        const rawPercentage = scoring.maxAllowedDeviation > 0
-            ? 100 - ((scoring.totalDeviation / scoring.maxAllowedDeviation) * 100)
+        const timingQuality = scoring.maxAllowedDeviation > 0
+            ? 1 - (scoring.totalDeviation / scoring.maxAllowedDeviation)
+            : 0;
+        const coverage = expected.length > 0 ? scoring.matchedCount / expected.length : 0;
+        const precision = (scoring.matchedCount + scoring.extraCount) > 0
+            ? scoring.matchedCount / (scoring.matchedCount + scoring.extraCount)
             : 0;
 
-        const x = clamp(rawPercentage / 100, 0, 1);
+        // Timing Quality: distance of taps from expected beats
+        // Coverage: how many expected beats were hit
+        // Precision: how many extra taps were there compared to matched taps
+        const blendedQuality =
+            (clamp(timingQuality, 0, 1) * GAME_TUNING.scoring.timingWeight) +
+            (clamp(coverage, 0, 1) * GAME_TUNING.scoring.coverageWeight) +
+            (clamp(precision, 0, 1) * GAME_TUNING.scoring.precisionWeight);
 
-        const alpha = 1.9; // steepness of the curve
-        const k = 0.7; // intercept point on linear scale
-
-        let curveValue = 0;
-        if (x < k) {
-            curveValue = k * Math.pow(x / k, alpha);
-        } else {
-            curveValue = 1 - (1 - k) * Math.pow((1 - x) / (1 - k), alpha);
-        }
-        const finalScore = curveValue * 10;
+        const easedQuality = Math.pow(clamp(blendedQuality, 0, 1), GAME_TUNING.scoring.finalScoreExponent);
+        const finalScore = easedQuality * GAME_TUNING.scoring.finalScoreScale;
 
         setScore(Math.max(0, finalScore.toFixed(1)));
     };
@@ -947,54 +1456,11 @@ export default function PolyrhythmGame() {
         orientationQuery.addEventListener('change', updateDeviceProfile);
         coarsePointerQuery.addEventListener('change', updateDeviceProfile);
 
-        try {
-            const rawStored = window.localStorage.getItem(MOBILE_LAYOUT_STORAGE_KEY);
-            if (rawStored) {
-                const parsed = JSON.parse(rawStored);
-                if (parsed && typeof parsed === 'object') {
-                    setMobileButtonLayouts({
-                        portrait: parsed.portrait || {},
-                        landscape: parsed.landscape || {}
-                    });
-                }
-            }
-        } catch {}
-
         return () => {
             orientationQuery.removeEventListener('change', updateDeviceProfile);
             coarsePointerQuery.removeEventListener('change', updateDeviceProfile);
         };
     }, []);
-
-    useEffect(() => {
-        setMobileButtonLayouts((prev) => {
-            const nextPortrait = normalizeLayoutForTracks(prev.portrait, tracks, 'portrait');
-            const nextLandscape = normalizeLayoutForTracks(prev.landscape, tracks, 'landscape');
-
-            const portraitChanged = JSON.stringify(nextPortrait) !== JSON.stringify(prev.portrait);
-            const landscapeChanged = JSON.stringify(nextLandscape) !== JSON.stringify(prev.landscape);
-            if (!portraitChanged && !landscapeChanged) return prev;
-
-            return {
-                portrait: nextPortrait,
-                landscape: nextLandscape
-            };
-        });
-    }, [tracks]);
-
-    useEffect(() => {
-        if (!isClientReady || typeof window === 'undefined') return;
-        try {
-            window.localStorage.setItem(
-                MOBILE_LAYOUT_STORAGE_KEY,
-                JSON.stringify({
-                    version: 1,
-                    portrait: mobileButtonLayouts.portrait,
-                    landscape: mobileButtonLayouts.landscape
-                })
-            );
-        } catch {}
-    }, [isClientReady, mobileButtonLayouts]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -1077,12 +1543,12 @@ export default function PolyrhythmGame() {
     return (
         <div className={`w-full h-full min-h-0 px-0 py-0 md:px-4 md:py-4 text-neutral-100 font-sans flex items-stretch justify-stretch md:items-center md:justify-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
             <div 
-                className={`tempo-window isolate flex flex-col w-full min-w-0 min-h-0 ${isMobileLayoutEnabled ? 'rounded-[1.7rem] border border-white/10' : 'rounded-[1.7rem] border border-white/10'} bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur`}
+                className={`tempo-window isolate flex flex-col w-full min-w-0 min-h-0 rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur`}
                 style={{
                     minHeight: isMobileLayoutEnabled ? '0' : windowMinHeight,
                     maxHeight: isMobileLayoutEnabled ? '100%' : windowMaxHeight,
                     width: isMobileLayoutEnabled ? '100%' : `min(100%, ${windowTargetWidth})`,
-                    maxWidth: isMobileLayoutEnabled ? 'none' : (gameState === 'setup' && !isLayoutEditorOpen ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`),
+                    maxWidth: isMobileLayoutEnabled ? 'none' : (gameState === 'setup' ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`),
                     height: isMobileLayoutEnabled ? '100%' : undefined,
                     transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
@@ -1094,7 +1560,7 @@ export default function PolyrhythmGame() {
                     <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
                 </div>
 
-                <div className={`relative z-10 flex-1 min-h-0 ${isMobileLayoutEnabled ? 'p-2 md:p-7' : 'p-5 md:p-7'} ${isMobileLayoutEnabled ? 'rounded-[inherit]' : 'rounded-[1.7rem]'} flex flex-col items-stretch ${isMobileLayoutEnabled ? 'justify-start' : 'justify-center'} ${(isGameplayActive || isMobileLayoutEditorActive) ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                <div className={`relative z-10 flex-1 min-h-0 ${isMobileLayoutEnabled ? 'p-2 md:p-7' : 'p-5 md:p-7'} ${isMobileLayoutEnabled ? 'rounded-[inherit]' : 'rounded-[1.7rem]'} flex flex-col items-stretch ${isMobileLayoutEnabled ? 'justify-start' : 'justify-center'} ${isGameplayActive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
 
                     {gameState === 'setup' && (
                         <SetupPhase
@@ -1114,13 +1580,6 @@ export default function PolyrhythmGame() {
                             countInBars={countInBars}
                             setCountInBars={setCountInBars}
                             isTouchPreferred={isMobileLayoutEnabled}
-                            orientation={orientation}
-                            isLayoutEditorOpen={isLayoutEditorOpen}
-                            onToggleLayoutEditor={() => setIsLayoutEditorOpen((prev) => !prev)}
-                            onCloseLayoutEditor={() => setIsLayoutEditorOpen(false)}
-                            onResetLayout={resetActiveOrientationLayout}
-                            buttonLayout={activeButtonLayout}
-                            onMoveLayoutButton={updateActiveOrientationLayoutPosition}
                         />
                     )}
 
@@ -1143,10 +1602,13 @@ export default function PolyrhythmGame() {
                             onTrackPointerUp={handleTrackPointerUp}
                             onTrackTouchStart={handleTrackTouchStart}
                             onTrackTouchEnd={handleTrackTouchEnd}
+                            onMobileFreeTapTouchStart={handleMobileFreeTapTouchStart}
+                            onMobileFreeTapTouchEnd={handleMobileFreeTapTouchEnd}
+                            onMobileFreeTapPointerDown={handleMobileFreeTapPointerDown}
+                            onMobileFreeTapPointerUp={handleMobileFreeTapPointerUp}
                             onTrackClick={handleTrackClick}
                             useCustomLayout={isMobileLayoutEnabled}
                             orientation={orientation}
-                            buttonLayout={activeButtonLayout}
                         />
                     )}
 
@@ -1159,6 +1621,7 @@ export default function PolyrhythmGame() {
                             measureDuration={measureDuration}
                             measures={measures}
                             lastAutoCorrectionMs={lastAutoCorrectionMs}
+                            debugAnalysis={debugAnalysis}
                             onTryAgain={abortGame}
                         />
                     )}

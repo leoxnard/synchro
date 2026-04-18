@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 function MetronomePendulum({ measureDuration, countInDuration, basePulses, startTime, label }) {
     const pointerRef = useRef(null);
@@ -62,10 +62,13 @@ export default function PlayingPhase({
     onTrackPointerUp,
     onTrackTouchStart,
     onTrackTouchEnd,
+    onMobileFreeTapTouchStart,
+    onMobileFreeTapTouchEnd,
+    onMobileFreeTapPointerDown,
+    onMobileFreeTapPointerUp,
     onTrackClick,
     useCustomLayout,
     orientation,
-    buttonLayout
 }) {
     const trackCount = tracks.length;
     const extraTracks = Math.max(0, trackCount - 3);
@@ -79,7 +82,65 @@ export default function PlayingPhase({
     const labelFontSizePx = Math.max(14, 18 - (extraTracks * 1.5));
     const labelPadXPx = Math.max(10, 16 - (extraTracks * 2));
     const [countInHighlightMap, setCountInHighlightMap] = useState({});
-    const countInHeaderClass = 'h-24 md:h-28';
+    const [tapFlashes, setTapFlashes] = useState([]); // Array of { id, x, y } for visual feedback
+
+    const spawnTapFlashes = (points) => {
+        if (!Array.isArray(points) || points.length === 0) return;
+
+        const newFlashes = points.map((point, index) => ({
+            id: `flash-${point.id || index}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            x: point.x,
+            y: point.y
+        }));
+
+        setTapFlashes((prev) => [...prev, ...newFlashes]);
+        setTimeout(() => {
+            setTapFlashes((prev) => prev.filter((flash) => !newFlashes.some((nextFlash) => nextFlash.id === flash.id)));
+        }, 350);
+    };
+
+    // Wrapper for mobile free-tap that adds visual feedback
+    const handleMobileFreeTapWithFeedback = (event) => {
+        if (!onMobileFreeTapTouchStart) return;
+        
+        const changedTouches = event.changedTouches || [];
+        const playingSurface = event.currentTarget;
+        const rect = playingSurface.getBoundingClientRect();
+        
+        const points = [];
+        for (let i = 0; i < changedTouches.length; i++) {
+            const touch = changedTouches[i];
+            const relativeX = touch.clientX - rect.left;
+            const relativeY = touch.clientY - rect.top;
+            const tapXPct = (relativeX / rect.width) * 100;
+            const tapYPct = (relativeY / rect.height) * 100;
+
+            points.push({
+                id: touch.identifier,
+                x: tapXPct,
+                y: tapYPct
+            });
+        }
+
+        spawnTapFlashes(points);
+        
+        // Call the actual handler
+        onMobileFreeTapTouchStart(event);
+    };
+
+    const handleMobileFreeTapPointerDownWithFeedback = (event) => {
+        if (!onMobileFreeTapPointerDown) return;
+
+        const playingSurface = event.currentTarget;
+        const rect = playingSurface.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            const tapXPct = ((event.clientX - rect.left) / rect.width) * 100;
+            const tapYPct = ((event.clientY - rect.top) / rect.height) * 100;
+            spawnTapFlashes([{ id: event.pointerId, x: tapXPct, y: tapYPct }]);
+        }
+
+        onMobileFreeTapPointerDown(event);
+    };
 
     useEffect(() => {
         if (gameState !== 'countIn') {
@@ -115,51 +176,6 @@ export default function PlayingPhase({
         animationFrameId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(animationFrameId);
     }, [gameState, tracks, startTime, countInDuration, measureDuration]);
-
-    const fallbackLayoutMap = useMemo(() => {
-        const total = tracks.length;
-        const isPortrait = orientation === 'portrait';
-        const xBase = isPortrait ? 56 : 54;
-        const yStart = isPortrait ? 24 : 18;
-        const yEnd = isPortrait ? 78 : 82;
-        const xOffsetsByCount = {
-            1: [0],
-            2: [0, 0],
-            3: [0, -8, 0],
-            4: [0, -7, -7, 0],
-            5: [0, -5, -10, -5, 0]
-        };
-        const xOffsets = xOffsetsByCount[total];
-        const fallback = {};
-
-        if (xOffsets) {
-            tracks.forEach((track, index) => {
-                const t = total <= 1 ? 0.5 : index / (total - 1);
-                fallback[track.id] = {
-                    x: Math.max(10, Math.min(90, xBase + (xOffsets[index] || 0))),
-                    y: Math.max(20, Math.min(84, yStart + (t * (yEnd - yStart))))
-                };
-            });
-            return fallback;
-        }
-
-        tracks.forEach((track, index) => {
-            const t = tracks.length <= 1 ? 0.5 : index / (tracks.length - 1);
-            if (orientation === 'portrait') {
-                fallback[track.id] = {
-                    x: 28 + (t * 52),
-                    y: 68 - (Math.sin(t * Math.PI) * 14) + (t * 6)
-                };
-            } else {
-                fallback[track.id] = {
-                    x: 18 + (t * 64),
-                    y: 58 - (Math.sin(t * Math.PI) * 6)
-                };
-            }
-        });
-
-        return fallback;
-    }, [tracks, orientation]);
 
     const renderTrackPad = (track, absoluteStyle) => {
         const assignedKey = track.key || '';
@@ -223,17 +239,51 @@ export default function PlayingPhase({
                     </div>
                 )}
 
-                <div className="relative w-full flex-1 min-h-0 self-stretch rounded-2xl">
-                    {tracks.map((track, index) => {
-                        const pos = buttonLayout?.[track.id] || fallbackLayoutMap[track.id] || fallbackLayoutMap[tracks[index]?.id];
-                        return renderTrackPad(track, {
-                            position: 'absolute',
-                            left: `${pos?.x ?? 50}%`,
-                            top: `${pos?.y ?? 56}%`,
-                            transform: 'translate(-50%, -50%)'
-                        });
-                    })}
+                <div 
+                    className="relative w-full flex-1 min-h-0 self-stretch rounded-2xl bg-gradient-to-b from-neutral-900/50 to-neutral-950/30"
+                    onPointerDown={handleMobileFreeTapPointerDownWithFeedback}
+                    onPointerUp={onMobileFreeTapPointerUp}
+                    onPointerCancel={onMobileFreeTapPointerUp}
+                    onTouchStart={handleMobileFreeTapWithFeedback}
+                    onTouchMove={(event) => event.preventDefault()}
+                    onTouchEnd={onMobileFreeTapTouchEnd}
+                    onTouchCancel={onMobileFreeTapTouchEnd}
+                    style={{
+                        touchAction: 'none',
+                        overscrollBehavior: 'none',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none'
+                    }}
+                >
+                    {/* Tap flash feedback visualization - only visual indicator, no pads */}
+                    {tapFlashes.map((flash) => (
+                        <div
+                            key={flash.id}
+                            className="absolute z-30 w-24 h-24 rounded-full pointer-events-none"
+                            style={{
+                                left: `${flash.x}%`,
+                                top: `${flash.y}%`,
+                                transform: 'translate(-50%, -50%)',
+                                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.65) 30%, rgba(56,189,248,0.25) 55%, transparent 78%)',
+                                filter: 'drop-shadow(0 0 10px rgba(125,211,252,0.45))',
+                                animation: 'tapFlash 0.45s ease-out forwards'
+                            }}
+                        />
+                    ))}
                 </div>
+
+                <style jsx>{`
+                    @keyframes tapFlash {
+                        0% {
+                            opacity: 0.95;
+                            transform: translate(-50%, -50%) scale(0.78);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translate(-50%, -50%) scale(1.95);
+                        }
+                    }
+                `}</style>
             </div>
         );
     }
