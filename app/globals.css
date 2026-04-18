@@ -40,3 +40,42 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* --- Globale Scrollbar-Anpassung --- */
+
+* {
+  scrollbar-color: rgb(255, 255, 255, 0.06) rgba(255, 255, 255, 0.03);
+}
+
+::-webkit-scrollbar {
+  width: 8px;   /* Breite des vertikalen Balkens */
+  height: 8px;  /* Höhe des horizontalen Balkens */
+}
+
+/* Der Hintergrund des Scrollbalkens (Track) */
+::-webkit-scrollbar-track {
+  background: rgba(38, 38, 38);
+  border-radius: 10px;
+}
+
+/* Der bewegliche Teil (Thumb) */
+::-webkit-scrollbar-thumb {
+  background: rgba(214, 211, 209, 0.2); /* Stone-Farbe mit Transparenz */
+  border-radius: 10px;
+  border: 2px solid transparent; /* Erzeugt einen Padding-Effekt innerhalb des Tracks */
+  background-clip: content-box;
+}
+
+/* Hover-Effekt für den beweglichen Teil */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(214, 211, 209, 0.4);
+}
+
+/* Speziell für den Bereich innerhalb deiner Polyrhythm-Komponente */
+.tempo-window ::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.2); /* Cyan-Ton passend zum Spiel-Akzent */
+}
+
+.tempo-window ::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.4);
+}
