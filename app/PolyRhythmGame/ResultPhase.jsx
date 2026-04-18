@@ -110,29 +110,16 @@ export default function ResultPhase({
 
                         {clusterEntries.map((cluster) => {
                             const mappedTrack = clusterToTrack.get(cluster.index);
+                            
+                            const fullTrack = mappedTrack ? tracks.find(t => t.id === mappedTrack.trackId) : null;
                             const color = getClusterColor(cluster.index);
 
                             return (
                                 <g key={`cluster-${cluster.index}`}>
-                                    <circle
-                                        cx={cluster.center.x}
-                                        cy={cluster.center.y}
-                                        r="4.0"
-                                        fill="none"
-                                        stroke={color}
-                                        strokeWidth="0.85"
-                                    />
-                                    <circle
-                                        cx={cluster.center.x}
-                                        cy={cluster.center.y}
-                                        r="1.6"
-                                        fill={color}
-                                        fillOpacity="0.35"
-                                        stroke={color}
-                                        strokeWidth="0.5"
-                                    />
+                                    <circle cx={cluster.center.x} cy={cluster.center.y} r="4.0" fill="none" stroke={color} strokeWidth="0.85" />
+                                    <circle cx={cluster.center.x} cy={cluster.center.y} r="1.6" fill={color} fillOpacity="0.35" stroke={color} strokeWidth="0.5" />
                                     <text x={cluster.center.x + 2.2} y={cluster.center.y + 1.2} fill="rgba(255,255,255,0.9)" fontSize="3.2" fontWeight="700">
-                                        C{cluster.index + 1}{mappedTrack ? `→${mappedTrack.trackKey === ' ' ? 'SPACE' : mappedTrack.trackKey.toUpperCase()}` : ''}
+                                        C{cluster.index + 1}{fullTrack ? `→${fullTrack.key === ' ' ? 'SPACE' : fullTrack.key.toUpperCase()} (${fullTrack.pulses})` : ''}
                                     </text>
                                 </g>
                             );
@@ -159,9 +146,9 @@ export default function ResultPhase({
                 {DEBUG_RESULTS_ENABLED && debugAnalysis && (
                     <button
                         onClick={() => setShowDebug((prev) => !prev)}
-                        className="px-5 py-2.5 rounded-full bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 hover:bg-cyan-400/15 transition-colors font-medium text-sm"
+                        className="sm:hidden px-5 py-2.5 rounded-full bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 hover:bg-cyan-400/15 transition-colors font-medium text-sm"
                     >
-                        {showDebug ? 'Hide Debug' : 'Show Debug'}
+                        {showDebug ? 'Hide Analysis' : 'Show Analysis'}
                     </button>
                 )}
             </div>
@@ -222,7 +209,7 @@ export default function ResultPhase({
                             </div>
                
                             <div className="relative w-[94%] left-[3%] mt-2">
-                                {/* Globale Base lines (Expected), die über alle Lanes gehen */}
+                                {/* Expected Base Lines */}
                                 <div className="absolute inset-0 pointer-events-none">
                                     {expectedBaseTimes.map((baseT, idx) => (
                                         <div 
@@ -233,7 +220,7 @@ export default function ResultPhase({
                                     ))}
                                 </div>
 
-                                {/* Kompaktere horizontale Lanes für jeden Measure */}
+                                {/* compact horizontal lanes for each measure */}
                                 <div className="relative z-20 flex flex-col gap-0.5">
                                     {Array.from({ length: totalRowsForTrack }).map((_, mIdx) => {
                                         const hitsInThisMeasure = hitsForTrack.filter(h => h.measureIndex === mIdx);
@@ -247,10 +234,9 @@ export default function ResultPhase({
                                                     let posPercent = ((hit.baseTime + hit.diff) / measureDuration) * 100;
                                                     posPercent = Math.max(-5, Math.min(105, posPercent));
                            
-                                                    // Unterscheidung zwischen dem eigentlich gezählten "Closest Tap" und Extra/Spam-Taps
                                                     const isExtra = hit.isExtra;
                                                     const visualClasses = isExtra 
-                                                        ? 'opacity-10 z-10' // Extra Taps: Durchsichtig & etwas kleiner
+                                                        ? 'opacity-10 z-10'
                                                         : 'opacity-100 shadow-[0_0_4px_currentColor] z-30';
                            
                                                     return (
