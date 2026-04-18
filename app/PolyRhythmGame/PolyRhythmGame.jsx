@@ -47,7 +47,7 @@ export default function PolyrhythmGame() {
     const [isClientReady, setIsClientReady] = useState(false);
     const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [orientation, setOrientation] = useState('portrait');
-    const isGameplayActive = gameState === 'countIn' || gameState === 'playing';
+    const isGameplayActive = gameState === 'countIn' || gameState === 'playing' || gameState === 'practice';
     const isMobileLayoutEnabled = isClientReady && isTouchPreferred;
 
     const { 
@@ -98,6 +98,7 @@ export default function PolyrhythmGame() {
     const touchFallbackPressIdRef = useRef(0);
     const lastTouchInteractionAtRef = useRef(0);
     const recentMobileTapSignatureRef = useRef([]);
+    const practiceIntervalRef = useRef(null);
 
     const supportsPointerEvents = () => (
         typeof window !== 'undefined' && 'PointerEvent' in window
@@ -162,7 +163,7 @@ export default function PolyrhythmGame() {
         const key = normalizeInputKey(rawKey);
         if (!key) return false;
 
-        if (gameState !== 'playing' && gameState !== 'countIn') return false;
+        if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return false;
 
         const validKeys = tracks
             .map((track) => normalizeInputKey(track.key || ''))
@@ -170,7 +171,8 @@ export default function PolyrhythmGame() {
         if (!validKeys.includes(key)) return false;
 
         const pressTime = performance.now() - startTimeRef.current;
-        if (gameState !== 'playing' && pressTime < -START_TAP_GRACE_MS) return false;
+        
+        if (gameState !== 'playing' && gameState !== 'practice' && pressTime < -START_TAP_GRACE_MS) return false;
 
         const DEDUP_WINDOW_MS = GAME_TUNING.input.dedupWindowMs;
         const recentSameKeyTap = actualTapsRef.current.find(
@@ -186,6 +188,11 @@ export default function PolyrhythmGame() {
             time: pressTime,
             ...(tapData || {})
         });
+        
+        if (gameState === 'practice' && actualTapsRef.current.length > 500) {
+            actualTapsRef.current = actualTapsRef.current.slice(-250);
+        }
+
         return true;
     };
 
@@ -212,7 +219,7 @@ export default function PolyrhythmGame() {
     };
 
     const beginTrackPress = ({ trackKey, pointerId, tapData = null }) => {
-        if (gameState !== 'playing' && gameState !== 'countIn') return false;
+        if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return false;
         if (pointerId == null) return false;
         if (activePointerToKeyRef.current.has(pointerId)) return false;
 
@@ -295,7 +302,7 @@ export default function PolyrhythmGame() {
 
     const handleMobileFreeTapTouchStart = (event) => {
         if (!isMobileLayoutEnabled) return; 
-        if (gameState !== 'playing' && gameState !== 'countIn') return;
+        if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return;
 
         if (supportsPointerEvents()) return;
 
@@ -315,7 +322,7 @@ export default function PolyrhythmGame() {
 
     const handleMobileFreeTapPointerDown = (event) => {
         if (!isMobileLayoutEnabled) return;
-        if (gameState !== 'playing' && gameState !== 'countIn') return;
+        if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return;
 
         event.preventDefault();
         processMobileFreeTapPoint({
@@ -360,7 +367,7 @@ export default function PolyrhythmGame() {
 
     const handleTrackClick = (event, trackKey) => {
         event.preventDefault();
-        if (gameState !== 'playing' && gameState !== 'countIn') return;
+        if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return;
 
         if (Date.now() - lastTouchInteractionAtRef.current < 700) return;
 
@@ -431,6 +438,64 @@ export default function PolyrhythmGame() {
             });
         });
         return taps;
+    };
+
+    const startPractice = async () => {
+        if (tracks.some(t => t.pulses <= 0)) {
+            alert("Please configure all rhythms correctly!");
+            return;
+        }
+
+        await initAudioContext();
+        stopAllAudioNodes();
+        timeoutsRef.current.forEach(clearTimeout);
+        timeoutsRef.current = [];
+        if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+
+        setGameState('practice');
+        actualTapsRef.current = [];
+
+        const now = audioCtxRef.current.currentTime + 0.1;
+        const measureDurationSecs = measureDuration / 1000;
+        const audioToPerfOffset = getAudioContextOffset();
+
+        startTimeRef.current = (now * 1000) + audioToPerfOffset;
+        let nextMeasureStartTime = now;
+
+        const scheduleAhead = () => {
+            if (!audioCtxRef.current) return;
+            const currentAudioTime = audioCtxRef.current.currentTime;
+            while (nextMeasureStartTime < currentAudioTime + 2.0) {
+                const clickEvents = [];
+
+                for (let p = 0; p < beatsPerMeasure; p += 1) {
+                    clickEvents.push({
+                        time: nextMeasureStartTime + (p / beatsPerMeasure) * measureDurationSecs,
+                        freq: p === 0 ? BEAT_ACCENT_TONE_HZ : BEAT_PULSE_TONE_HZ,
+                        rank: 0
+                    });
+                }
+
+                tracks.forEach((track, trackIndex) => {
+                    const pulseDurationSecs = measureDurationSecs / Math.max(1, track.pulses);
+                    const rhythmToneHz = getRhythmToneHz(trackIndex);
+                    const rank = trackIndex + 1;
+
+                    for (let p = 0; p < track.pulses; p += 1) {
+                        clickEvents.push({
+                            time: nextMeasureStartTime + (p * pulseDurationSecs),
+                            freq: rhythmToneHz, rank
+                        });
+                    }
+                });
+
+                scheduleDedupedClickEvents(clickEvents);
+                nextMeasureStartTime += measureDurationSecs;
+            }
+        };
+
+        scheduleAhead();
+        practiceIntervalRef.current = setInterval(scheduleAhead, 500);
     };
 
     const startGame = async () => {
@@ -533,6 +598,10 @@ export default function PolyrhythmGame() {
     const abortGame = () => {
         timeoutsRef.current.forEach(clearTimeout);
         timeoutsRef.current = [];
+        if (practiceIntervalRef.current) {
+            clearInterval(practiceIntervalRef.current);
+            practiceIntervalRef.current = null;
+        }
         stopAllAudioNodes();
         closeAudioContext();
         actualTapsRef.current = [];
@@ -592,7 +661,7 @@ export default function PolyrhythmGame() {
         const handleKeyDown = (e) => {
             if (e.repeat) return;
 
-            if (e.key === 'Escape' && (gameState === 'playing' || gameState === 'countIn')) {
+            if (e.key === 'Escape' && (gameState === 'playing' || gameState === 'countIn' || gameState === 'practice' || gameState === 'result')) {
                 e.preventDefault();
                 abortGame();
                 return;
@@ -612,7 +681,7 @@ export default function PolyrhythmGame() {
                 return;
             }
       
-            if (gameState !== 'playing' && gameState !== 'countIn') return;
+            if (gameState !== 'playing' && gameState !== 'countIn' && gameState !== 'practice') return;
 
             const key = normalizeInputKey(e.key);
             if (key === ' ') e.preventDefault();
@@ -695,6 +764,7 @@ export default function PolyrhythmGame() {
                             updateTrack={updateTrack}
                             removeTrack={removeTrack}
                             startGame={startGame}
+                            startPractice={startPractice}
                             onOpenLatencyTest={() => setGameState('latencyTest')}
                             latencyCompMs={latencyCompMs}
                             bpm={bpm}
@@ -715,7 +785,7 @@ export default function PolyrhythmGame() {
                         />
                     )}
 
-                    {(gameState === 'countIn' || gameState === 'playing') && (
+                    {(gameState === 'countIn' || gameState === 'playing' || gameState === 'practice') && (
                         <PlayingPhase
                             gameState={gameState}
                             count={count}
@@ -724,6 +794,7 @@ export default function PolyrhythmGame() {
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
                             countInDuration={countInBars * measureDuration}
+                            onAbortGame={abortGame}
                             onTrackPointerDown={handleTrackPointerDown}
                             onTrackPointerUp={handleTrackPointerUp}
                             onTrackTouchStart={handleTrackTouchStart}

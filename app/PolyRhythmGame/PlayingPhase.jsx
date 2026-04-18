@@ -50,6 +50,46 @@ function MetronomePendulum({ measureDuration, countInDuration, basePulses, start
     );
 }
 
+function MobilePracticeNode({ track, measureDuration, startTime, isPressed }) {
+    const ballRef = useRef(null);
+
+    useEffect(() => {
+        let animationFrameId;
+        const pulseDuration = measureDuration / Math.max(1, track.pulses);
+
+        const renderLoop = () => {
+            if (!ballRef.current) return;
+            const now = performance.now();
+            let totalElapsed = now - startTime;
+            if (totalElapsed < 0) totalElapsed = 0;
+
+            const progress = (totalElapsed % pulseDuration) / pulseDuration;
+            const heightObj = 4 * progress * (1 - progress);
+
+            ballRef.current.style.transform = `translateY(-${heightObj * 120}px)`;
+
+            animationFrameId = requestAnimationFrame(renderLoop);
+        };
+
+        animationFrameId = requestAnimationFrame(renderLoop);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [measureDuration, startTime, track.pulses]);
+
+    return (
+        <div className="flex flex-col items-center gap-3 pointer-events-none">
+            <div className={`relative w-14 h-44 rounded-full border-[3px] transition-all duration-75 flex flex-col justify-end p-1 ${isPressed ? 'border-cyan-300 bg-cyan-400/10 shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'border-white/20 bg-black/40'}`}>
+                <div
+                    ref={ballRef}
+                    className={`relative z-10 w-full aspect-square rounded-full flex items-center justify-center text-xl font-black transition-colors duration-75 ${isPressed ? 'bg-cyan-300 text-neutral-900 shadow-[0_0_15px_rgba(34,211,238,0.8)]' : 'bg-stone-300 text-neutral-800 shadow-[0_4px_10px_rgba(0,0,0,0.5)]'}`}
+                    style={{ willChange: 'transform' }}
+                >
+                    {track.pulses}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function PlayingPhase({
     gameState,
     count,
@@ -58,6 +98,7 @@ export default function PlayingPhase({
     startTime,
     measureDuration,
     countInDuration,
+    onAbortGame,
     onTrackPointerDown,
     onTrackPointerUp,
     onTrackTouchStart,
@@ -227,6 +268,87 @@ export default function PlayingPhase({
         );
     };
 
+    if (gameState === 'practice') {
+        if (useCustomLayout) {
+            // MOBILE PRACTICE LAYOUT
+            return (
+                <div className="relative w-full h-full min-h-0 text-center flex flex-col items-stretch gap-3">
+                    <div className="absolute top-2 right-2 z-50">
+                        <button onClick={onAbortGame} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white font-bold text-lg border border-white/20 hover:bg-black/60 transition-colors">
+                            ✕
+                        </button>
+                    </div>
+                    <div
+                        className="relative w-full flex-1 min-h-0 self-stretch rounded-2xl bg-gradient-to-b from-neutral-900/50 to-neutral-950/30 flex flex-row flex-nowrap justify-evenly px-2 py-15 overflow-hidden"
+                        onPointerDown={handleMobileFreeTapPointerDownWithFeedback}
+                        onPointerUp={onMobileFreeTapPointerUp}
+                        onPointerCancel={onMobileFreeTapPointerUp}
+                        onTouchStart={handleMobileFreeTapWithFeedback}
+                        onTouchMove={(event) => event.preventDefault()}
+                        onTouchEnd={onMobileFreeTapTouchEnd}
+                        onTouchCancel={onMobileFreeTapTouchEnd}
+                        style={{
+                            touchAction: 'none',
+                            overscrollBehavior: 'none',
+                            WebkitUserSelect: 'none',
+                            userSelect: 'none'
+                        }}
+                    >
+                        {tracks.map(track => {
+                            const normalizedKey = typeof track.key === 'string' ? track.key.toLowerCase() : '';
+                            return (
+                                <MobilePracticeNode
+                                    key={track.id} track={track} measureDuration={measureDuration} startTime={startTime}
+                                    isPressed={Boolean(activeKeys[normalizedKey])}
+                                />
+                            );
+                        })}
+
+                        {tapFlashes.map((flash) => (
+                            <div
+                                key={flash.id}
+                                className="absolute z-30 w-24 h-24 rounded-full pointer-events-none"
+                                style={{
+                                    left: `${flash.x}%`,
+                                    top: `${flash.y}%`,
+                                    transform: 'translate(-50%, -50%)',
+                                    background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.65) 30%, rgba(56,189,248,0.25) 55%, transparent 78%)',
+                                    filter: 'drop-shadow(0 0 10px rgba(125,211,252,0.45))',
+                                    animation: 'tapFlash 0.45s ease-out forwards'
+                                }}
+                            />
+                        ))}
+                    </div>
+                    <style jsx>{`
+                        @keyframes tapFlash {
+                            0% { opacity: 0.20; transform: translate(-50%, -50%) scale(0.78); }
+                            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.95); }
+                        }
+                    `}</style>
+                </div>
+            );
+        }
+
+        // DESKTOP PRACTICE LAYOUT (Pendulum + Pads)
+        return (
+            <div className="w-full text-center space-y-8 flex flex-col items-center justify-center h-full">
+                <div className="w-full px-8 opacity-70 flex flex-col gap-4 mb-4">
+                    {tracks.map(track => (
+                        <MetronomePendulum
+                            key={track.id} label={track.key === ' ' ? 'SPACE' : track.key}
+                            measureDuration={measureDuration} countInDuration={0}
+                            basePulses={track.pulses} startTime={startTime}
+                        />
+                    ))}
+                </div>
+                <div className="w-full flex justify-center mt-8" style={{ gap: `${gapPx}px` }}>
+                    {tracks.map((track) => renderTrackPad(track))}
+                </div>
+                <p className="text-sm text-neutral-500 mt-6">Press Esc to exit</p>
+            </div>
+        );
+    }
+
     // Mobile custom layout: Pads light up during count-in, then play normally
     if (useCustomLayout) {
         return (
@@ -255,7 +377,6 @@ export default function PlayingPhase({
                         userSelect: 'none'
                     }}
                 >
-                    {/* Tap flash feedback visualization - only visual indicator, no pads */}
                     {tapFlashes.map((flash) => (
                         <div
                             key={flash.id}
@@ -275,7 +396,7 @@ export default function PlayingPhase({
                 <style jsx>{`
                     @keyframes tapFlash {
                         0% {
-                            opacity: 0.95;
+                            opacity: 0.20;
                             transform: translate(-50%, -50%) scale(0.78);
                         }
                         100% {

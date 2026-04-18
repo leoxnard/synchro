@@ -7,6 +7,7 @@ export default function DesktopSetupPhase({
     updateTrack,
     removeTrack,
     startGame,
+    startPractice,
     onOpenLatencyTest,
     latencyCompMs,
     bpm,
@@ -16,7 +17,7 @@ export default function DesktopSetupPhase({
     beatsPerMeasure,
     setBeatsPerMeasure,
     countInBars,
-    setCountInBars
+    setCountInBars,
 }) {
     return (
         <div className="w-full h-full relative flex flex-col p-1">
@@ -109,6 +110,12 @@ export default function DesktopSetupPhase({
                 )}
 
                 <div className="flex gap-2">
+                    <button
+                        onClick={startPractice}
+                        className="px-5 py-2.5 rounded-full border border-white/15 bg-white/[0.02] hover:bg-white/[0.06] text-neutral-300 text-xs font-bold uppercase tracking-[0.14em] transition-all"
+                    >
+                        PRACTICE
+                    </button>
                     <button
                         onClick={startGame}
                         className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.14em] transition-all transform hover:scale-105"

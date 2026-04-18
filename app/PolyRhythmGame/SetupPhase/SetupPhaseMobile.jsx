@@ -8,6 +8,7 @@ export default function MobileSetupPhase({
     updateTrack,
     removeTrack,
     startGame,
+    startPractice,
     bpm,
     setBpm,
     measures,
@@ -96,6 +97,12 @@ export default function MobileSetupPhase({
 
                 {/* Bottom controls */}
                 <div className="w-full flex justify-end items-center gap-2">
+                    <button
+                        onClick={startPractice}
+                        className="px-5 py-2 rounded-full border border-white/15 bg-white/[0.02] hover:bg-white/[0.06] text-neutral-300 text-xs font-bold uppercase tracking-[0.12em] transition-all"
+                    >
+                        PRACTICE
+                    </button>
                     <button
                         onClick={startGame}
                         className="px-6 py-2 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.12em] transition-all transform hover:scale-105"
