@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import SetupPhase from './SetupPhase';
+import SetupPhase from './SetupPhase/SetupPhase';
 import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
 import LatencyTestPhase from './LatencyTestPhase';
@@ -17,6 +17,7 @@ const END_TAP_BASE_BUFFER_MS = 220;
 const BEAT_ACCENT_TONE_HZ = 1175;
 const BEAT_PULSE_TONE_HZ = 988;
 const RHYTHM_TONES_HZ = [880, 740, 659, 587, 523];
+const MOBILE_LAYOUT_STORAGE_KEY = 'synchro_poly_mobile_layout_v1';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -174,6 +175,93 @@ const buildAutoLatencySamples = ({ expectedTaps, actualTaps }) => {
     return samples;
 };
 
+const getOrientationFromWindow = () => (
+    window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait'
+);
+
+const buildStackedDefaults = (tracks, orientation) => {
+    const total = tracks.length;
+    const isPortrait = orientation === 'portrait';
+    const xBase = isPortrait ? 56 : 54;
+    const yStart = isPortrait ? 20 : 18;
+    const yEnd = isPortrait ? 82 : 82;
+
+    const xOffsetsByCount = {
+        1: [0],
+        2: [0, 0],
+        3: [0, -8, 0],
+        4: [0, -7, -7, 0],
+        5: [0, -5, -10, -5, 0]
+    };
+
+    const xOffsets = xOffsetsByCount[total];
+    if (!xOffsets) return null;
+
+    const layout = {};
+    tracks.forEach((track, index) => {
+        const t = total <= 1 ? 0.5 : index / (total - 1);
+        const y = yStart + (t * (yEnd - yStart));
+        const x = xBase + (xOffsets[index] || 0);
+        layout[track.id] = {
+            x: clamp(x, 10, 90),
+            y: clamp(y, 20, 84)
+        };
+    });
+
+    return layout;
+};
+
+const buildDefaultButtonLayout = (tracks, orientation) => {
+    if (!Array.isArray(tracks) || tracks.length === 0) return {};
+
+    const stackedDefaults = buildStackedDefaults(tracks, orientation);
+    if (stackedDefaults) return stackedDefaults;
+
+    const total = tracks.length;
+    const defaultMap = {};
+
+    tracks.forEach((track, index) => {
+        const t = total <= 1 ? 0.5 : index / (total - 1);
+        let x;
+        let y;
+
+        if (orientation === 'portrait') {
+            x = 28 + (t * 52);
+            y = 68 - (Math.sin(t * Math.PI) * 14) + (t * 6);
+        } else {
+            x = 18 + (t * 64);
+            y = 58 - (Math.sin(t * Math.PI) * 6);
+        }
+
+        defaultMap[track.id] = {
+            x: clamp(x, 10, 90),
+            y: clamp(y, 20, 84)
+        };
+    });
+
+    return defaultMap;
+};
+
+const normalizeLayoutForTracks = (layoutMap, tracks, orientation) => {
+    const fallback = buildDefaultButtonLayout(tracks, orientation);
+    const normalized = {};
+
+    tracks.forEach((track) => {
+        const existing = layoutMap?.[track.id];
+        if (!existing || !Number.isFinite(existing.x) || !Number.isFinite(existing.y)) {
+            normalized[track.id] = fallback[track.id];
+            return;
+        }
+
+        normalized[track.id] = {
+            x: clamp(existing.x, 10, 90),
+            y: clamp(existing.y, 20, 84)
+        };
+    });
+
+    return normalized;
+};
+
 export default function PolyrhythmGame() {
     const [gameState, setGameState] = useState('setup'); 
     const [count, setCount] = useState(4); 
@@ -191,6 +279,17 @@ export default function PolyrhythmGame() {
     const [detailedResults, setDetailedResults] = useState([]);
     const [latencyCompMs, setLatencyCompMs] = useState(DEFAULT_LATENCY_COMP_MS);
     const [lastAutoCorrectionMs, setLastAutoCorrectionMs] = useState(0);
+    const [isClientReady, setIsClientReady] = useState(false);
+    const [isTouchPreferred, setIsTouchPreferred] = useState(false);
+    const [orientation, setOrientation] = useState('portrait');
+    const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false);
+    const [mobileButtonLayouts, setMobileButtonLayouts] = useState({ portrait: {}, landscape: {} });
+    const isGameplayActive = gameState === 'countIn' || gameState === 'playing';
+    const isMobileLayoutEnabled = isClientReady && isTouchPreferred;
+    const isMobileLayoutEditorActive = isMobileLayoutEnabled && gameState === 'setup' && isLayoutEditorOpen;
+    const activeButtonLayout = orientation === 'landscape'
+        ? mobileButtonLayouts.landscape
+        : mobileButtonLayouts.portrait;
 
     const measureDuration = (60 / bpm) * beatsPerMeasure * 1000;
     const extraTracks = Math.max(0, tracks.length - 3);
@@ -199,10 +298,15 @@ export default function PolyrhythmGame() {
     const playingRowWidthPx = (tracks.length * circleSizePx) + (Math.max(0, tracks.length - 1) * gapPx);
     const inGameWidthRem = Math.max(31, (playingRowWidthPx + 84) / 16);
     const clampedInGameWidthRem = Math.min(inGameWidthRem, 46);
-    const windowTargetWidth = gameState === 'setup'
+    const windowTargetWidth = (gameState === 'setup' && !isLayoutEditorOpen)
         ? '31rem'
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
-    const windowMinHeight = gameState === 'latencyTest' ? '55rem' : '30rem';
+    const windowMinHeight = isMobileLayoutEnabled
+        ? undefined
+        : (gameState === 'latencyTest' ? '55rem' : '30rem');
+    const windowMaxHeight = isMobileLayoutEnabled
+        ? undefined
+        : '55rem';
 
     const getAssignedKey = (index, total) => {
         const configs = {
@@ -223,6 +327,217 @@ export default function PolyrhythmGame() {
     const activeAudioNodesRef = useRef([]);
     const detailedResultsRef = useRef([]); 
     const timeoutsRef = useRef([]); 
+    const activePointerToKeyRef = useRef(new Map());
+    const keyPressCountRef = useRef(new Map());
+    const touchFallbackPressIdRef = useRef(0);
+    const lastTouchInteractionAtRef = useRef(0);
+
+    const supportsPointerEvents = () => (
+        typeof window !== 'undefined' && 'PointerEvent' in window
+    );
+
+    const updateActiveOrientationLayoutPosition = (trackId, x, y) => {
+        setMobileButtonLayouts((prev) => {
+            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
+            return {
+                ...prev,
+                [key]: {
+                    ...prev[key],
+                    [trackId]: {
+                        x: clamp(x, 2, 98),
+                        y: clamp(y, 2, 98)
+                    }
+                }
+            };
+        });
+    };
+
+    const resetActiveOrientationLayout = () => {
+        setMobileButtonLayouts((prev) => {
+            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
+            return {
+                ...prev,
+                [key]: buildDefaultButtonLayout(tracks, key)
+            };
+        });
+    };
+
+    const normalizeInputKey = (key) => {
+        if (typeof key !== 'string') return '';
+        if (key === 'Spacebar') return ' ';
+        if (key === 'Space') return ' ';
+        return key.toLowerCase();
+    };
+
+    const clearInputVisualState = () => {
+        activePointerToKeyRef.current.clear();
+        keyPressCountRef.current.clear();
+        setActiveKeys({});
+    };
+
+    const setKeyPressedState = (key, isPressed) => {
+        if (!key) return;
+
+        const currentCount = keyPressCountRef.current.get(key) || 0;
+        const nextCount = isPressed
+            ? currentCount + 1
+            : Math.max(0, currentCount - 1);
+
+        if (nextCount === 0) {
+            keyPressCountRef.current.delete(key);
+        } else {
+            keyPressCountRef.current.set(key, nextCount);
+        }
+
+        setActiveKeys((prev) => {
+            const next = { ...prev };
+            if (nextCount > 0) {
+                next[key] = true;
+            } else {
+                delete next[key];
+            }
+            return next;
+        });
+    };
+
+    const registerTapForKey = (rawKey) => {
+        const key = normalizeInputKey(rawKey);
+        if (!key) return false;
+
+        if (gameState !== 'playing' && gameState !== 'countIn') return false;
+
+        const validKeys = tracks
+            .map((track) => normalizeInputKey(track.key || ''))
+            .filter(Boolean);
+        if (!validKeys.includes(key)) return false;
+
+        const pressTime = performance.now() - startTimeRef.current;
+        if (gameState !== 'playing' && pressTime < -START_TAP_GRACE_MS) return false;
+
+        actualTapsRef.current.push({ key, time: pressTime });
+        return true;
+    };
+
+    const handleInputDown = (rawKey, options = {}) => {
+        const { releaseAfterMs } = options;
+        const key = normalizeInputKey(rawKey);
+        if (!registerTapForKey(key)) return false;
+
+        setKeyPressedState(key, true);
+
+        if (Number.isFinite(releaseAfterMs) && releaseAfterMs > 0) {
+            setTimeout(() => {
+                setKeyPressedState(key, false);
+            }, releaseAfterMs);
+        }
+
+        return true;
+    };
+
+    const handleInputUp = (rawKey) => {
+        const key = normalizeInputKey(rawKey);
+        if (!key) return;
+        setKeyPressedState(key, false);
+    };
+
+    const beginTrackPress = ({ trackKey, pointerId, eventTarget }) => {
+        if (gameState !== 'playing' && gameState !== 'countIn') return false;
+        if (pointerId == null) return false;
+        if (activePointerToKeyRef.current.has(pointerId)) return false;
+
+        const normalizedTrackKey = normalizeInputKey(trackKey);
+        if (!normalizedTrackKey) return false;
+        if (!handleInputDown(normalizedTrackKey)) return false;
+
+        activePointerToKeyRef.current.set(pointerId, normalizedTrackKey);
+
+        if (eventTarget && typeof eventTarget.setPointerCapture === 'function' && typeof pointerId === 'number') {
+            try {
+                eventTarget.setPointerCapture(pointerId);
+            } catch {}
+        }
+
+        return true;
+    };
+
+    const endTrackPress = (pointerId) => {
+        if (pointerId == null) return;
+        releasePointerById(pointerId);
+    };
+
+    const handleTrackPointerDown = (event, trackKey) => {
+        event.preventDefault();
+        beginTrackPress({
+            trackKey,
+            pointerId: event.pointerId,
+            eventTarget: event.currentTarget
+        });
+    };
+
+    const releasePointerById = (pointerId) => {
+        const normalizedKey = activePointerToKeyRef.current.get(pointerId);
+        if (!normalizedKey) return;
+
+        activePointerToKeyRef.current.delete(pointerId);
+        handleInputUp(normalizedKey);
+    };
+
+    const handleTrackPointerUp = (event) => {
+        event.preventDefault();
+        endTrackPress(event.pointerId);
+    };
+
+    const handleTrackTouchStart = (event, trackKey) => {
+        if (supportsPointerEvents()) return;
+
+        event.preventDefault();
+        lastTouchInteractionAtRef.current = Date.now();
+        const changedTouches = event.changedTouches || [];
+
+        for (let i = 0; i < changedTouches.length; i += 1) {
+            const touch = changedTouches[i];
+            beginTrackPress({
+                trackKey,
+                pointerId: `touch-${touch.identifier}`,
+                eventTarget: event.currentTarget
+            });
+        }
+    };
+
+    const handleTrackTouchEnd = (event) => {
+        if (supportsPointerEvents()) return;
+
+        event.preventDefault();
+        lastTouchInteractionAtRef.current = Date.now();
+        const changedTouches = event.changedTouches || [];
+
+        for (let i = 0; i < changedTouches.length; i += 1) {
+            const touch = changedTouches[i];
+            endTrackPress(`touch-${touch.identifier}`);
+        }
+    };
+
+    const handleTrackClick = (event, trackKey) => {
+        event.preventDefault();
+        if (gameState !== 'playing' && gameState !== 'countIn') return;
+
+        // Mobile browsers can emit a synthetic click right after a touch sequence.
+        // Ignore those so taps are not counted twice and scores stay comparable.
+        if (Date.now() - lastTouchInteractionAtRef.current < 700) return;
+
+        // Click fallback is only needed on browsers without pointer events.
+        if (supportsPointerEvents()) return;
+
+        const pointerId = `tap-${touchFallbackPressIdRef.current}`;
+        touchFallbackPressIdRef.current += 1;
+
+        const didPress = beginTrackPress({ trackKey, pointerId });
+        if (!didPress) return;
+
+        setTimeout(() => {
+            endTrackPress(pointerId);
+        }, 90);
+    };
 
     const addTrack = () => {
         if (tracks.length >= 5) return; 
@@ -233,6 +548,13 @@ export default function PolyrhythmGame() {
             ...t,
             key: defaultKeys[index] || t.key
         }));
+        setMobileButtonLayouts((prev) => {
+            const key = orientation === 'landscape' ? 'landscape' : 'portrait';
+            return {
+                ...prev,
+                [key]: buildDefaultButtonLayout(newTracks, key)
+            };
+        });
         setTracks(newTracks);
     };
 
@@ -251,6 +573,13 @@ export default function PolyrhythmGame() {
                 key: defaultKeys[index] || t.key
             }));
             setTracks(newTracks);
+            setMobileButtonLayouts((prev) => {
+                const key = orientation === 'landscape' ? 'landscape' : 'portrait';
+                return {
+                    ...prev,
+                    [key]: buildDefaultButtonLayout(newTracks, key)
+                };
+            });
         }
     };
 
@@ -356,6 +685,7 @@ export default function PolyrhythmGame() {
         actualTapsRef.current = [];
 
         const countInTotalBeats = Math.max(1, countInBars * beatsPerMeasure);
+        setIsLayoutEditorOpen(false);
         setGameState('countIn');
         setCount(countInTotalBeats); 
     
@@ -446,6 +776,8 @@ export default function PolyrhythmGame() {
         }
         actualTapsRef.current = [];
         expectedTapsRef.current = [];
+        clearInputVisualState();
+        setIsLayoutEditorOpen(false);
         setGameState('setup');
     };
 
@@ -598,6 +930,73 @@ export default function PolyrhythmGame() {
     };
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
+        const touchPoints = navigator.maxTouchPoints || 0;
+
+        const updateDeviceProfile = () => {
+            setIsClientReady(true);
+            setIsTouchPreferred(coarsePointerQuery.matches || touchPoints > 0);
+            setOrientation(getOrientationFromWindow());
+        };
+
+        updateDeviceProfile();
+
+        const orientationQuery = window.matchMedia('(orientation: landscape)');
+        orientationQuery.addEventListener('change', updateDeviceProfile);
+        coarsePointerQuery.addEventListener('change', updateDeviceProfile);
+
+        try {
+            const rawStored = window.localStorage.getItem(MOBILE_LAYOUT_STORAGE_KEY);
+            if (rawStored) {
+                const parsed = JSON.parse(rawStored);
+                if (parsed && typeof parsed === 'object') {
+                    setMobileButtonLayouts({
+                        portrait: parsed.portrait || {},
+                        landscape: parsed.landscape || {}
+                    });
+                }
+            }
+        } catch {}
+
+        return () => {
+            orientationQuery.removeEventListener('change', updateDeviceProfile);
+            coarsePointerQuery.removeEventListener('change', updateDeviceProfile);
+        };
+    }, []);
+
+    useEffect(() => {
+        setMobileButtonLayouts((prev) => {
+            const nextPortrait = normalizeLayoutForTracks(prev.portrait, tracks, 'portrait');
+            const nextLandscape = normalizeLayoutForTracks(prev.landscape, tracks, 'landscape');
+
+            const portraitChanged = JSON.stringify(nextPortrait) !== JSON.stringify(prev.portrait);
+            const landscapeChanged = JSON.stringify(nextLandscape) !== JSON.stringify(prev.landscape);
+            if (!portraitChanged && !landscapeChanged) return prev;
+
+            return {
+                portrait: nextPortrait,
+                landscape: nextLandscape
+            };
+        });
+    }, [tracks]);
+
+    useEffect(() => {
+        if (!isClientReady || typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(
+                MOBILE_LAYOUT_STORAGE_KEY,
+                JSON.stringify({
+                    version: 1,
+                    portrait: mobileButtonLayouts.portrait,
+                    landscape: mobileButtonLayouts.landscape
+                })
+            );
+        } catch {}
+    }, [isClientReady, mobileButtonLayouts]);
+
+    useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.repeat) return;
 
@@ -623,35 +1022,68 @@ export default function PolyrhythmGame() {
       
             if (gameState !== 'playing' && gameState !== 'countIn') return;
 
-            const key = e.key.toLowerCase();
+            const key = normalizeInputKey(e.key);
             if (key === ' ') e.preventDefault();
-      
-            const validKeys = tracks.map(t => t.key || '');
-            const pressTime = performance.now() - startTimeRef.current;
 
-            if (gameState !== 'playing' && (gameState !== 'countIn' || pressTime < -START_TAP_GRACE_MS)) return;
-      
-            if (validKeys.includes(key)) {
-                actualTapsRef.current.push({ key, time: pressTime });
-        
-                setActiveKeys(prev => ({ ...prev, [key]: true }));
-                setTimeout(() => setActiveKeys(prev => ({ ...prev, [key]: false })), 100);
-            }
+            handleInputDown(key, { releaseAfterMs: 100 });
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     });
 
+    useEffect(() => {
+        if (!isGameplayActive) {
+            clearInputVisualState();
+            return;
+        }
+
+        const preventNativeGesture = (event) => {
+            event.preventDefault();
+        };
+
+        let lastTouchEnd = 0;
+        const preventGameplayTouchDefaults = (event) => {
+            if (event.touches && event.touches.length > 1) {
+                event.preventDefault();
+                return;
+            }
+
+            const now = Date.now();
+            if (event.type === 'touchend' && now - lastTouchEnd < 320) {
+                event.preventDefault();
+            }
+
+            if (event.type === 'touchend') {
+                lastTouchEnd = now;
+            }
+        };
+
+        document.addEventListener('gesturestart', preventNativeGesture);
+        document.addEventListener('gesturechange', preventNativeGesture);
+        document.addEventListener('gestureend', preventNativeGesture);
+        document.addEventListener('touchmove', preventGameplayTouchDefaults, { passive: false });
+        document.addEventListener('touchend', preventGameplayTouchDefaults, { passive: false });
+
+        return () => {
+            document.removeEventListener('gesturestart', preventNativeGesture);
+            document.removeEventListener('gesturechange', preventNativeGesture);
+            document.removeEventListener('gestureend', preventNativeGesture);
+            document.removeEventListener('touchmove', preventGameplayTouchDefaults);
+            document.removeEventListener('touchend', preventGameplayTouchDefaults);
+        };
+    }, [isGameplayActive]);
+
     return (
-        <div className="w-full px-4 py-4 text-neutral-100 font-sans flex items-center justify-center">
+        <div className={`w-full h-full min-h-0 px-0 py-0 md:px-4 md:py-4 text-neutral-100 font-sans flex items-stretch justify-stretch md:items-center md:justify-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
             <div 
-                className="tempo-window isolate flex flex-col w-full rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur"
+                className={`tempo-window isolate flex flex-col w-full min-w-0 min-h-0 ${isMobileLayoutEnabled ? 'rounded-[1.7rem] border border-white/10' : 'rounded-[1.7rem] border border-white/10'} bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur`}
                 style={{
-                    minHeight: windowMinHeight,
-                    maxHeight: '55rem',
-                    width: `min(100%, ${windowTargetWidth})`,
-                    maxWidth: gameState === 'setup' ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`,
+                    minHeight: isMobileLayoutEnabled ? '0' : windowMinHeight,
+                    maxHeight: isMobileLayoutEnabled ? '100%' : windowMaxHeight,
+                    width: isMobileLayoutEnabled ? '100%' : `min(100%, ${windowTargetWidth})`,
+                    maxWidth: isMobileLayoutEnabled ? 'none' : (gameState === 'setup' && !isLayoutEditorOpen ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`),
+                    height: isMobileLayoutEnabled ? '100%' : undefined,
                     transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
             >
@@ -662,7 +1094,7 @@ export default function PolyrhythmGame() {
                     <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
                 </div>
 
-                <div className="relative z-10 flex-1 p-5 md:p-7 rounded-[1.7rem] flex flex-col items-center justify-center overflow-y-auto">
+                <div className={`relative z-10 flex-1 min-h-0 ${isMobileLayoutEnabled ? 'p-2 md:p-7' : 'p-5 md:p-7'} ${isMobileLayoutEnabled ? 'rounded-[inherit]' : 'rounded-[1.7rem]'} flex flex-col items-stretch ${isMobileLayoutEnabled ? 'justify-start' : 'justify-center'} ${(isGameplayActive || isMobileLayoutEditorActive) ? 'overflow-hidden' : 'overflow-y-auto'}`}>
 
                     {gameState === 'setup' && (
                         <SetupPhase
@@ -681,6 +1113,14 @@ export default function PolyrhythmGame() {
                             setBeatsPerMeasure={setBeatsPerMeasure}
                             countInBars={countInBars}
                             setCountInBars={setCountInBars}
+                            isTouchPreferred={isMobileLayoutEnabled}
+                            orientation={orientation}
+                            isLayoutEditorOpen={isLayoutEditorOpen}
+                            onToggleLayoutEditor={() => setIsLayoutEditorOpen((prev) => !prev)}
+                            onCloseLayoutEditor={() => setIsLayoutEditorOpen(false)}
+                            onResetLayout={resetActiveOrientationLayout}
+                            buttonLayout={activeButtonLayout}
+                            onMoveLayoutButton={updateActiveOrientationLayoutPosition}
                         />
                     )}
 
@@ -699,6 +1139,14 @@ export default function PolyrhythmGame() {
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
                             countInDuration={countInBars * measureDuration}
+                            onTrackPointerDown={handleTrackPointerDown}
+                            onTrackPointerUp={handleTrackPointerUp}
+                            onTrackTouchStart={handleTrackTouchStart}
+                            onTrackTouchEnd={handleTrackTouchEnd}
+                            onTrackClick={handleTrackClick}
+                            useCustomLayout={isMobileLayoutEnabled}
+                            orientation={orientation}
+                            buttonLayout={activeButtonLayout}
                         />
                     )}
 

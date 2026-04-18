@@ -11,19 +11,19 @@ export default function ResultPhase({
     onTryAgain
 }) {
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in-up overflow-y-auto pr-1">
-            <h2 className="text-2xl font-light text-neutral-400 mb-3 text-center tracking-wide">Your Score</h2>
-            <div className="text-7xl font-black text-stone-300 mb-6 drop-shadow-lg text-center">
+        <div className="w-full max-w-3xl h-full flex flex-col items-center animate-fade-in-up overflow-y-auto pr-2 md:pr-3">
+            <h2 className="text-xl md:text-2xl font-light text-neutral-400 my-2 text-center tracking-wide">Your Score</h2>
+            <div className="text-6xl md:text-7xl font-black text-stone-300 mb-4 md:mb-6 drop-shadow-lg text-center">
                 {score.toFixed(1)}
             </div>
             <button 
                 onClick={onTryAgain}
-                className="px-7 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm mb-8"
+                className="px-6 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm mb-5 md:mb-7"
             >
                 Try Again
             </button>
 
-            <div className="w-full max-w-2xl p-4 mb-6 text-center">
+            <div className="w-full max-w-2xl p-3 md:p-4 mb-4 md:mb-6 text-center">
                 <div className="flex gap-6 justify-center">
                     {lastAutoCorrectionMs !== 0 && (
                         <div>
@@ -43,7 +43,7 @@ export default function ResultPhase({
             </div>
       
             {/* VISUALIZATION */}
-            <div className="w-full space-y-4 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
+            <div className="w-full space-y-4 bg-white/[0.03] p-3 md:p-4 rounded-2xl border border-white/10 mb-2">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
