@@ -82,15 +82,6 @@ function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, s
     );
 }
 
-export default function SetupPhase(props) {
-    const isMobile = useIsMobile();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    if (!isClient) return <div className="loading-placeholder" />;
-
-    return isMobile ? <SetupMobile {...props} /> : <SetupDesktop {...props} />;
+export default function SetupView(props) {
+    return props.isMobile ? <SetupMobile {...props} /> : <SetupDesktop {...props} />;
 }

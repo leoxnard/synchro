@@ -64,15 +64,6 @@ function PlayMobile({ subLabel, label, progressPct, onTap, beatName, bpm }) {
     );
 }
 
-export default function PlayPhase(props) {
-    const isMobile = useIsMobile();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    if (!isClient) return <div className="loading-placeholder" />;
-
-    return isMobile ? <PlayMobile {...props} /> : <PlayDesktop {...props} />;
+export default function PlayView(props) {
+    return props.isMobile ? <PlayMobile {...props} /> : <PlayDesktop {...props} />;
 }

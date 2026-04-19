@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import SetupPhase from './SetupView';
+import SetupView from './SetupView';
 import ResultView from './ResultView';
-import PlayPhase from './PlayView';
+import PlayView from './PlayView';
 
 import { SCORING_CONFIG, BEATS } from './constants/gameConfig';
 import { clamp } from './utils/mathHelpers';
@@ -20,7 +20,6 @@ export default function HoldTheTime() {
     const [tapCount, setTapCount] = useState(0);
     const [sessionProgress, setSessionProgress] = useState(0);
     const [analysis, setAnalysis] = useState(null);
-    const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [tapRipples, setTapRipples] = useState([]);
     
     const [previewingBeatId, setPreviewingBeatId] = useState(null);
@@ -28,9 +27,7 @@ export default function HoldTheTime() {
 
     const selectedBeat = useMemo(() => BEATS.find((beat) => beat.id === selectedBeatId) || BEATS[0], [selectedBeatId]);
     const beatMs = 60000 / selectedBeat.bpm;
-    const isMobile = isTouchPreferred;
 
-    const audioRef = useRef(null);
     const timerRefs = useRef([]);
     const clockRef = useRef(0);
     
@@ -43,6 +40,9 @@ export default function HoldTheTime() {
     const audioCtxRef = useRef(null);
     const sourceNodeRef = useRef(null);
     const gainNodeRef = useRef(null);
+
+    const isMobile = useIsMobile();
+    const [isClient, setIsClient] = useState(false);
 
     const stopPreview = () => {
         if (previewAudioRef.current) {
@@ -68,6 +68,10 @@ export default function HoldTheTime() {
         previewAudioRef.current = audio;
         setPreviewingBeatId(beatId);
     };
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     useEffect(() => {
         const handleGlobalKeyDown = (e) => {
@@ -332,6 +336,8 @@ export default function HoldTheTime() {
             progressPct = clamp((elapsed / returnMs) * 100, 0, 100);
         }
     }
+
+    if (!isClient) return <div className="loading-placeholder" />;
 
     return (
         <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
