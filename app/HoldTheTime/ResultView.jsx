@@ -162,7 +162,7 @@ function ScoreGraph({ label, currentError, inflection, steepness, accuracyLinear
             
             <div className="flex justify-between text-[8px] text-neutral-600">
                 <span>0ms</span>
-                <span>Fehler (ms) →</span>
+                <span>Error (ms) →</span>
                 <span>{Math.round(maxMs)}ms</span>
             </div>
         </div>
@@ -224,10 +224,9 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
             ) : (
                 <div className="mt-3 flex flex-col gap-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Accuracy S-Kurve Details */}
                         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
                             <ScoreGraph 
-                                label="Accuracy Kurve"
+                                label="Accuracy Curve"
                                 currentError={analysis.rawMath.averageAbsOffsetMs}
                                 inflection={analysis.rawMath.accuracyInflectionMs}
                                 steepness={SCORING_CONFIG.accuracySteepness}
@@ -236,15 +235,14 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                                 score={analysis.rawMath.accuracyRaw}
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
-                                <div className="flex justify-between"><span>Fehler:</span> <span className="text-white">{Math.round(analysis.rawMath.averageAbsOffsetMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Multiplikator:</span> <span className="text-white">x{analysis.rawMath.coveragePenalty.toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Error:</span> <span className="text-white">{Math.round(analysis.rawMath.averageAbsOffsetMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Multiplier:</span> <span className="text-white">x{analysis.rawMath.coveragePenalty.toFixed(2)}</span></div>
                             </div>
                         </div>
 
-                        {/* Consistency S-Kurve Details */}
                         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
                             <ScoreGraph 
-                                label="Consistency Kurve"
+                                label="Consistency Curve"
                                 currentError={analysis.rawMath.stdDeviationMs}
                                 inflection={analysis.rawMath.consistencyInflectionMs}
                                 steepness={SCORING_CONFIG.consistencySteepness}
@@ -253,8 +251,8 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                                 score={analysis.rawMath.consistencyRawBeforePenalty}
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
-                                <div className="flex justify-between"><span>Streuung:</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Fehler-Abzug:</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault)}</span></div>
+                                <div className="flex justify-between"><span>Variance:</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Penalty:</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault)}</span></div>
                             </div>
                         </div>
                     </div>
