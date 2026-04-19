@@ -20,7 +20,6 @@ export default function HoldTheTime() {
     const [tapCount, setTapCount] = useState(0);
     const [sessionProgress, setSessionProgress] = useState(0);
     const [analysis, setAnalysis] = useState(null);
-    const [tapRipples, setTapRipples] = useState([]);
     
     const [previewingBeatId, setPreviewingBeatId] = useState(null);
     const previewAudioRef = useRef(null);

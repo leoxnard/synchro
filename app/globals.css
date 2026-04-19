@@ -21,11 +21,11 @@
 
 body {
   background:
-    radial-gradient(circle at 15% 0%, rgba(45, 212, 191, 0.12), transparent 38%),
-    radial-gradient(circle at 85% 100%, rgba(34, 211, 238, 0.1), transparent 40%),
+    radial-gradient(circle at 05% 00%, rgba(45, 212, 191, 0.09), transparent 10%),
+    radial-gradient(circle at 85% 100%, rgba(34, 211, 238, 0.1), transparent 50%),
     var(--background);
   background-repeat: no-repeat, no-repeat, no-repeat;
-  background-size: 140% 140%, 140% 140%, auto;
+  background-size: 240% 140%, 140% 140%, auto;
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Avenir Next", "Helvetica Neue", sans-serif;
 }

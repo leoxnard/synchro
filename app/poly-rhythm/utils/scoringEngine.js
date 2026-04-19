@@ -17,7 +17,7 @@ import {
     buildAutoLatencySamples,
     estimateAutoLatencyCorrectionMs,
     estimateFallbackAutoLatencyMs,
-} from '../utils/latencyAnalysis';
+} from './latencyAnalysis';
 
 const selectInitialClusterCenters = (points, clusterCount) => {
     if (!points.length || clusterCount <= 0) return [];

@@ -108,7 +108,7 @@ export default function TempoRecognitionGame() {
     }, [audioCtx]);
 
     return (
-        <div className="w-full px-4 py-4">
+        <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
             <div className="tempo-window isolate relative mx-auto h-[34rem] w-full max-w-md overflow-hidden rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur">
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
                     <div className="tempo-orb tempo-orb-a" />
