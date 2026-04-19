@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useIsMobile } from "../hooks/useIsMobile";
 
-function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
+export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
+    const [isPressed, setIsPressed] = useState(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                setIsPressed(true);
+            }
+        };
+        
+        const handleKeyUp = (e) => {
+            if (e.code === 'Space') {
+                setIsPressed(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     return (
         <div className="flex h-full min-h-0 flex-col gap-4">
             <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-4">
@@ -16,17 +39,29 @@ function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
                     </div>
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 transition-all duration-75" style={{ width: `${progressPct}%` }} />
+                    <div 
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 transition-all duration-75" 
+                        style={{ width: `${progressPct}%` }} 
+                    />
                 </div>
             </div>
 
-            <div className="flex flex-1 items-center justify-center rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.14),transparent_35%),linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
-                <div className="relative flex h-64 w-64 items-center justify-center rounded-full border border-white/10 bg-black/25 md:h-72 md:w-72">
-                    <div className="absolute inset-6 rounded-full border border-white/10" />
-                    <div className="absolute inset-12 rounded-full border border-cyan-200/10" />
-                    <div className="text-center">
+            <div className="flex flex-1 items-center justify-center rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.05),transparent_40%),linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
+                <div 
+                    className={`relative flex h-64 w-64 m-2 items-center justify-center rounded-full border md:h-72 md:w-72 transition-all duration-150 ease-out ${
+                        isPressed 
+                        ? 'scale-[0.97] border-white/20 bg-white/[0.05]' 
+                        : 'scale-100 border-white/10 bg-black/25'
+                    }`}
+                >
+                    <div className={`absolute inset-6 rounded-full border transition-colors duration-150 ${isPressed ? 'border-white/20' : 'border-white/10'}`} />
+                    <div className="absolute inset-12 rounded-full border border-white/5" />
+                    
+                    <div className={`text-center transition-transform duration-150 ${isPressed ? 'scale-[0.98]' : 'scale-100'}`}>
                         <div className="text-[11px] uppercase tracking-[0.34em] text-neutral-500">Press</div>
-                        <div className="mt-2 text-4xl font-black text-stone-100">SPACEBAR</div>
+                        <div className={`mt-2 text-4xl font-black transition-colors duration-150 ${isPressed ? 'text-neutral-300' : 'text-stone-100'}`}>
+                            SPACEBAR
+                        </div>
                     </div>
                 </div>
             </div>

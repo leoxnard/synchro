@@ -213,7 +213,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
             />
 
             {!showAnalysis ? (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
                     <StatCard label="Start Delay Fix" value={formatMs(analysis.calibrationMs)} />
                     <StatCard label="Avg Offset" value={formatMs(analysis.averageOffsetMs)} />
                     <StatCard label="Early Taps" value={analysis.earlyCount} />

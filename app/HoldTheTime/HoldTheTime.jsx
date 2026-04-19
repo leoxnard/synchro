@@ -122,14 +122,6 @@ export default function HoldTheTime() {
     }, [gameState, isMobile, triggerTaps, selectedBeatId]);
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia('(pointer: coarse)');
-        const updatePreference = () => setIsTouchPreferred(mediaQuery.matches || navigator.maxTouchPoints > 0);
-        updatePreference();
-        mediaQuery.addEventListener('change', updatePreference);
-        return () => mediaQuery.removeEventListener('change', updatePreference);
-    }, []);
-
-    useEffect(() => {
         return () => {
             timerRefs.current.forEach((timerId) => clearTimeout(timerId));
             if (clockRef.current) cancelAnimationFrame(clockRef.current);
@@ -344,16 +336,21 @@ export default function HoldTheTime() {
             <div 
                 className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-950/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
                 style={{ 
-                    maxWidth: gameState === 'results' ? '56rem' : '28rem' 
+                    maxWidth: gameState === 'results' ? '45rem' : '28rem' 
                 }}
             >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_26%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_20%,transparent_80%,rgba(255,255,255,0.02))]" />
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                    <div className="tempo-orb tempo-orb-a" />
+                    <div className="tempo-orb tempo-orb-b" />
+                    <div className="tempo-orb tempo-orb-c" />
+                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
+                </div>
 
                 <div className="relative z-10 flex min-h-[30rem] md:min-h-[32rem] flex-col p-4 md:p-6 transition-all duration-500">
                     
                     <div className="flex flex-1 min-h-0 flex-col gap-4">
                         {gameState === 'setup' && (
-                            <SetupPhase
+                            <SetupView
                                 triggerTaps={triggerTaps}
                                 setTriggerTaps={setTriggerTaps}
                                 silentBars={silentBars}
@@ -363,17 +360,19 @@ export default function HoldTheTime() {
                                 onStart={startSession}
                                 previewingBeatId={previewingBeatId}
                                 onPreviewStart={startPreview}
+                                isMobile={isMobile}
                             />
                         )}
 
                         {gameState === 'running' && (
-                            <PlayPhase
+                            <PlayView
                                 subLabel={playSubLabel}
                                 label={playLabel}
                                 progressPct={progressPct}
                                 onTap={recordTap}
                                 beatName={selectedBeat.name}
                                 bpm={selectedBeat.bpm}
+                                isMobile={isMobile}
                             />
                         )}
 
@@ -383,27 +382,66 @@ export default function HoldTheTime() {
                                 selectedBeat={selectedBeat}
                                 onPlayAgain={startSession}
                                 onBackToSetup={restartToSetup}
+                                isMobile={isMobile}
                             />
                         )}
                     </div>
-
-                    {gameState === 'running' && tapRipples.map((ripple) => (
-                        <div
-                        key={ripple.id}
-                        className="pointer-events-none absolute z-20 h-24 w-24 rounded-full"
-                        style={{
-                            left: `${ripple.x}%`, top: `${ripple.y}%`,
-                            transform: 'translate(-50%, -50%)',
-                            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%)',
-                            filter: 'drop-shadow(0 0 12px rgba(125,211,252,0.55))',
-                            animation: 'tapRipple 0.35s ease-out forwards',
-                        }}
-                        />
-                    ))}
                 </div>
             </div>
 
             <style jsx>{`
+                .tempo-orb {
+                    position: absolute;
+                    border-radius: 9999px;
+                    filter: blur(62px) saturate(1.2);
+                    mix-blend-mode: screen;
+                    pointer-events: none;
+                    opacity: 0;
+                }
+
+                .tempo-orb-a {
+                    width: 16rem;
+                    height: 16rem;
+                    left: -3rem;
+                    top: -4rem;
+                    background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
+                    animation: orbFloatA 9s ease-in-out infinite;
+                }
+
+                .tempo-orb-b {
+                    width: 18rem;
+                    height: 18rem;
+                    right: -4rem;
+                    bottom: -5rem;
+                    background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
+                    animation: orbFloatB 11s ease-in-out infinite;
+                }
+
+                .tempo-orb-c {
+                    width: 13rem;
+                    height: 13rem;
+                    right: 28%;
+                    top: 32%;
+                    background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
+                    animation: orbFloatC 8s ease-in-out infinite;
+                }
+
+                @keyframes orbFloatA {
+                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
+                    35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
+                    70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
+                }
+
+                @keyframes orbFloatB {
+                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
+                    40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
+                    75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
+                }
+
+                @keyframes orbFloatC {
+                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
+                    50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
+                }
                 @keyframes tapRipple {
                     0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
                     100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
