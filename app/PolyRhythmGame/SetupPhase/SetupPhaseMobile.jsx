@@ -1,6 +1,6 @@
 import React from 'react';
 import { SlArrowLeft, SlArrowRight } from 'react-icons/sl';
-import { NumberStepper } from '../components/NumberStepper';
+import NumberStepper from '../../components/NumberStepper';
 
 export default function MobileSetupPhase({
     tracks,

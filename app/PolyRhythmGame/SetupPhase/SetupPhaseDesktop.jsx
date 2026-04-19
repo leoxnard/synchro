@@ -1,5 +1,5 @@
 import React from 'react';
-import { NumberStepper } from '../components/NumberStepper';
+import NumberStepper from '../../components/NumberStepper';
 
 export default function DesktopSetupPhase({
     tracks,

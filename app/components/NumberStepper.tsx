@@ -14,7 +14,7 @@ type NumberStepperProps = {
     className?: string;
 };
 
-export function NumberStepper({
+export default function NumberStepper({
     label,
     value,
     onChange,
