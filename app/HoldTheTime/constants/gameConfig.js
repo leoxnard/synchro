@@ -1,19 +1,18 @@
 export const SCORING_CONFIG = {
     returnBars: 1,
 
-    // --- ACCURACY (Ziel: Unter 20ms = 100% | 159ms = ~35%) ---
-    accuracyInflectionPct: 0.18,  // Wendepunkt (50 Pkt) bei ca. 120ms (bei 120 BPM)
-    accuracySteepness: 3.8,       // Etwas steiler, um das Plateau oben zu halten
-    // Sehr hoher Wert = fast kein Abzug bei perfekten Schlägen (< 20ms)
+    // --- ACCURACY  ---
+    accuracyInflectionPct: 0.18,
+    accuracySteepness: 3.8,
     accuracyLinearDropMs: 1200,   
 
-    // --- CONSISTENCY (Ziel: Unter 15ms = 100% | 31ms = ~85% | 36ms = ~75%) ---
-    consistencyInflectionPct: 0.10, // Sehr strenger Wendepunkt (ca. 45ms bei 120 BPM)
-    consistencySteepness: 4.9,      // Extreme S-Form: oben flach, dann Klippe
+    // --- CONSISTENCY  ---
+    consistencyInflectionPct: 0.10,
+    consistencySteepness: 4.9,
     consistencyLinearDropMs: 1500,  
 
-    weightConsistency: 0.6,
-    weightAccuracy: 0.4,
+    weightConsistency: 0.5,
+    weightAccuracy: 0.5,
 
     faultPenaltyMultiplier: 1.4,
     earlyLateThresholdMs: 15
