@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 export const metadata: Metadata = {
     title: "Legal Notice",
@@ -17,23 +18,12 @@ export default function LegalNoticePage() {
 
                 <div>
                     <h2 className="text-lg font-medium text-neutral-100">Information pursuant to Section 5 TMG</h2>
-                    <p className="mt-2 text-neutral-300">Leonard Sima</p>
-                    <p className="text-neutral-300">Floriansmühlstrasse 1</p>
-                    <p className="text-neutral-300">80939 Munich</p>
-                    <p className="text-neutral-300">Germany</p>
+                    <Image src="/images/address-info.png" alt="Address Details" width={270} height={60} className="pointer-events-none select-none" />
                 </div>
 
                 <div>
-                    <h2 className="mt-2 text-lg font-medium text-neutral-100">Contact</h2>
-                    <p className="text-neutral-300">Email: synchro@leonardsima.de</p>
-                </div>
-
-                <div>
-                    <h2 className="mt-2 text-lg font-medium text-neutral-100">Responsible for Content</h2>
-                    <p className="mt-2 text-neutral-300">Leonard Sima</p>
-                    <p className="text-neutral-300">Floriansmühlstrasse 1</p>
-                    <p className="text-neutral-300">80939 Munich</p>
-                    <p className="text-neutral-300">Germany</p>
+                    <h2 className="text-lg font-medium text-neutral-100">Contact</h2>
+                    <p className="text-lg font-medium text-neutral-100">Email: synchro@leonardsima.de</p>
                 </div>
 
                 <div className="my-2 h-px w-full bg-neutral-800" />

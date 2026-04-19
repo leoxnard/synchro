@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 export const metadata: Metadata = {
     title: "Privacy Policy",
@@ -19,14 +20,7 @@ export default function PrivacyPolicyPage() {
                     <h2 className="mb-2 text-2xl font-medium text-neutral-100">1. Data Controller</h2>
                     <p>
                         Responsible for data processing on this website:
-                        <br />
-                        Leonard Sima
-                        <br />
-                        Floriansmühlstrasse 1
-                        <br />
-                        80939 Munich
-                        <br />
-                        Germany
+                        <Image src="/images/address-info.png" alt="Address Details" width={250} height={60} className="pointer-events-none select-none" />
                         <br />
                         Email: synchro@leonardsima.de
                     </p>
