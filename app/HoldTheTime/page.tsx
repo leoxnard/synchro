@@ -4,6 +4,7 @@ import HoldTheTime from './HoldTheTime';
 export const metadata: Metadata = {
     title: 'Hold The Time',
     description: 'Keep the beat alive while the drum loop drops out and returns.',
+    keywords: ['hold the time', 'drum game', 'rhythm game', 'music game', 'timing challenge', 'timing game'],
 };
 
 export default function HoldTheTimePage() {

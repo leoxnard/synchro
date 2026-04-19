@@ -6,7 +6,7 @@ import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
 import LatencyTestPhase from './LatencyTestPhase';
 
-import { useAudioEngine } from './hooks/useAudioEngine';
+import { useAudioEngine } from '../hooks/useAudioEngine';
 import { computeFinalScore } from './utils/scoringEngine';
 import { 
     getOrientationFromWindow,
