@@ -27,8 +27,16 @@ export default function TempoRecognitionGame() {
     const isNewHighscoreFlag = gameState === 'final-results' && currentSessionTotal > highscore;
 
 
-    const generateTargetTempo = () => {
-        return Math.floor(Math.random() * (MAX_TEMPO - MIN_TEMPO + 1)) + MIN_TEMPO;
+    const generateTargetTempo = (previousTempo) => {
+        let newTarget = Math.floor(Math.random() * (MAX_TEMPO - MIN_TEMPO + 1)) + MIN_TEMPO;
+        
+        if (previousTempo && previousTempo > 0) {
+            while (Math.abs(newTarget - previousTempo) < 20) {
+                newTarget = Math.floor(Math.random() * (MAX_TEMPO - MIN_TEMPO + 1)) + MIN_TEMPO;
+            }
+        }
+        
+        return newTarget;
     };
 
     const generateStartingTempo = (target) => {
@@ -40,7 +48,7 @@ export default function TempoRecognitionGame() {
     };
 
     const startRound = () => {
-        const newTarget = generateTargetTempo();
+        const newTarget = generateTargetTempo(targetTempo);
         setTargetTempo(newTarget);
         setCurrentTempo(generateStartingTempo(newTarget));
         setGameState('listening');

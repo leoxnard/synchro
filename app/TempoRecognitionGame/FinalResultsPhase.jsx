@@ -29,8 +29,8 @@ export default function FinalResultsPhase({ scores, highscore, isNewHighscore, o
                         {scores.map((score, idx) => (
                             <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.03] px-1.5 py-2.5">
                                 <p className={`text-2xl font-black mb-1 ${
-                                    score >= 80 ? 'text-emerald-400' :
-                                        score >= 60 ? 'text-amber-400' :
+                                    score >= 90 ? 'text-emerald-400' :
+                                        score >= 80 ? 'text-amber-400' :
                                             'text-red-400'
                                 }`}>
                                     {(Math.round(score)/10).toFixed(1)}

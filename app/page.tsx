@@ -3,10 +3,12 @@ import { useState } from "react";
 import Link from "next/link";
 import PolyRhythmGame from "./PolyRhythmGame/PolyRhythmGame";
 import TempoRecognitionGame from "./TempoRecognitionGame/TempoRecognitionGame";
+import HoldTheTimeGame from "./HoldTheTime/HoldTheTime";
 
 const GAMES = [
     { id: "poly-rhythm", label: "Polyrhythm", component: PolyRhythmGame },
     { id: "tempo-recognition", label: "Tempo Recognition", component: TempoRecognitionGame },
+    { id: "hold-the-time", label: "Hold The Time", component: HoldTheTimeGame },
 ];
 
 export default function Home() {
