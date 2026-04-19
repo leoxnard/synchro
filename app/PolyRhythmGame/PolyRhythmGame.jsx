@@ -735,6 +735,19 @@ export default function PolyrhythmGame() {
         };
     }, [isGameplayActive]);
 
+    useEffect(() => {
+        return () => {
+            if (timeoutsRef.current) {
+                timeoutsRef.current.forEach(clearTimeout);
+            }
+            if (practiceIntervalRef.current) {
+                clearInterval(practiceIntervalRef.current);
+            }
+            stopAllAudioNodes();
+            closeAudioContext();
+        };
+    }, []);
+
     return (
         <div className={`w-full h-full min-h-0 px-0 py-0 md:px-4 md:py-4 text-neutral-100 font-sans flex items-stretch justify-stretch md:items-center md:justify-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
             <div 
