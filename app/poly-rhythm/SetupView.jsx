@@ -156,8 +156,6 @@ function MobileSetupView({
     return (
         <div className="w-full h-full relative flex flex-col p-2 min-w-0 min-h-0">
             <div className="w-full relative flex flex-col flex-1 min-w-0 min-h-0 pb-4">
-                <span className="text-xl font-light text-neutral-400 mb-2 text-center tracking-wide border-b border-white/10 pb-2">Polyrhythm</span>
-
                 {/* Settings Grid */}
                 <div className="grid grid-cols-2 gap-2 mb-4 pb-4 border-b border-white/10">
                     <NumberStepper label="Tempo" value={bpm} onChange={setBpm} min={30} max={240} step={5} compact={true} />
@@ -223,7 +221,7 @@ function MobileSetupView({
                 </div>
 
                 {/* Bottom controls */}
-                <div className="w-full flex justify-end items-center gap-2">
+                <div className="w-full flex justify-center items-center gap-2 pb-2">
                     <button
                         onClick={startPractice}
                         className="px-5 py-2 rounded-full border border-white/15 bg-white/[0.02] hover:bg-white/[0.06] text-neutral-300 text-xs font-bold uppercase tracking-[0.12em] transition-all"

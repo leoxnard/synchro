@@ -34,10 +34,10 @@ export default function Navbar() {
                             key={game.id}
                             href={game.href}
                             className={`px-4 py-2 font-medium transition-colors ${
-                                pathname === game.href
-                                    ? 'text-red-700 dark:text-red-300'
-                                    : 'text-red-900 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
-                            }`}
+                            pathname === game.href
+                                ? 'text-neutral-500 dark:text-neutral-300'
+                                : 'text-neutral-900 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
+                        }`}
                         >
                             {game.label}
                         </Link>

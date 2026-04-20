@@ -146,6 +146,7 @@ export default function HoldTheTime() {
             timerRefs.current.forEach((timerId) => clearTimeout(timerId));
             if (clockRef.current) cancelAnimationFrame(clockRef.current);
             stopPreview();
+            clearSession();
         };
     }, []);
 
@@ -358,9 +359,9 @@ export default function HoldTheTime() {
     if (!isClient) return <div className="loading-placeholder" />;
 
     return (
-        <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
+        <div className="w-full h-full px-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
-                className="relative overflow-hidden isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                className={`relative overflow-hidden isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 ${!isMobileLayoutEnabled ? 'shadow-[0_20px_60px_rgba(0,0,0,0.4)]' : ''} backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                 style={{
                     width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
                     height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,

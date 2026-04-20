@@ -8,9 +8,9 @@ function BeatCard({ beat, selected, onSelect, isPreviewing, onPreviewStart }) {
             <button
                 type="button"
                 onClick={() => onSelect(beat.id)}
-                className="flex-1 px-4 py-3 text-left outline-none rounded-l-2xl"
+                className="flex-1 px-3 py-2 md:px-4 md:py-3 text-left outline-none rounded-l-2xl"
             >
-                <div className="text-sm font-semibold text-stone-100">{beat.name}</div>
+                <div className="text-xs md:text-sm font-semibold text-stone-100">{beat.name}</div>
                 <div className="mt-1 text-[11px] uppercase tracking-[0.22em] text-neutral-500">{beat.bpm} BPM</div>
             </button>
             <button
@@ -55,7 +55,7 @@ function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, 
 
 function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
-        <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1">
+        <div className="flex h-full flex-col gap-4 overflow-y-auto">
             <div className="grid gap-2 grid-cols-2">
                 <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact={true} />
                 <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact={true} />
