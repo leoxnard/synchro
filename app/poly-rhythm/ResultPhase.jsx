@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const DEBUG_RESULTS_ENABLED = true;
 
-export default function ResultPhase({
+export default function ResultView({
     score,
     tracks,
     expectedTaps,

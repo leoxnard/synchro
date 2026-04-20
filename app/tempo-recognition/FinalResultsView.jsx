@@ -1,7 +1,7 @@
 import React from 'react';
 import { SlReload } from "react-icons/sl";
 
-export default function FinalResultsPhase({ scores, highscore, isNewHighscore, onRestart }) {
+export default function FinalResultsView({ scores, highscore, isNewHighscore, onRestart }) {
     const totalScore = scores.reduce((sum, score) => sum + score, 0);
     const averageScore = scores.length > 0 ? Math.round(totalScore / scores.length) : 0;
 

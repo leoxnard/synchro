@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SlArrowRight } from "react-icons/sl";
 
-export default function AdjustmentPhase({ startTempo, onSubmit, minTempo, maxTempo, audioCtx }) {
+export default function AdjustmentView({ startTempo, onSubmit, minTempo, maxTempo, audioCtx }) {
     const [tempo, setTempo] = useState(startTempo);
     const audioCtxRef = useRef(null);
     const ownsAudioCtxRef = useRef(false);

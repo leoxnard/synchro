@@ -44,7 +44,7 @@ const DynamicAudioWave = ({ baseRadius, color, volatility, speed, strokeWidth })
     );
 };
 
-export default function ListeningPhase({ targetTempo, audioCtx, onListeningComplete }) {
+export default function ListeningView({ targetTempo, audioCtx, onListeningComplete }) {
     const [progress, setProgress] = useState(100);
     const [pulses, setPulses] = useState([]);
     const [centerPulseKey, setCenterPulseKey] = useState(0);

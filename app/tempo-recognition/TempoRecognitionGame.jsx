@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ListeningPhase from './ListeningPhase';
-import AdjustmentPhase from './AdjustmentPhase';
-import RoundResultsPhase from './RoundResultsPhase';
-import FinalResultsPhase from './FinalResultsPhase';
+import ListeningView from './ListeningView';
+import AdjustmentView from './AdjustmentView';
+import RoundResultsView from './RoundResultsView';
+import FinalResultsView from './FinalResultsView';
 import { getHighscore, saveHighscore } from '../lib/highscoreStorage';
 
 const MIN_TEMPO = 40;
@@ -152,7 +152,7 @@ export default function TempoRecognitionGame() {
                     )}
 
                     {gameState === 'listening' && (
-                        <ListeningPhase
+                        <ListeningView
                             targetTempo={targetTempo}
                             audioCtx={audioCtx}
                             onListeningComplete={() => setGameState('adjusting')}
@@ -160,7 +160,7 @@ export default function TempoRecognitionGame() {
                     )}
 
                     {gameState === 'adjusting' && (
-                        <AdjustmentPhase
+                        <AdjustmentView
                             startTempo={currentTempo}
                             onSubmit={handleAdjustmentSubmit}
                             minTempo={MIN_TEMPO}
@@ -170,7 +170,7 @@ export default function TempoRecognitionGame() {
                     )}
 
                     {gameState === 'round-results' && (
-                        <RoundResultsPhase
+                        <RoundResultsView
                             round={round}
                             totalRounds={TOTAL_ROUNDS}
                             targetTempo={targetTempo}
@@ -181,7 +181,7 @@ export default function TempoRecognitionGame() {
                     )}
 
                     {gameState === 'final-results' && (
-                        <FinalResultsPhase
+                        <FinalResultsView
                             scores={scores}
                             highscore={highscore}
                             isNewHighscore={isNewHighscoreFlag}

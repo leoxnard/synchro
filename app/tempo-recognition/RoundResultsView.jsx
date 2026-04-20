@@ -1,7 +1,7 @@
 import React from 'react';
 import { SlArrowRight } from "react-icons/sl";
 
-export default function RoundResultsPhase({ round, totalRounds, targetTempo, guessTempo, score, onContinue }) {
+export default function RoundResultsView({ round, totalRounds, targetTempo, guessTempo, score, onContinue }) {
     return (
         <div className="h-full w-full flex items-center justify-center">
             <div className="relative w-full max-w-lg h-full flex flex-col px-2 md:px-3">
