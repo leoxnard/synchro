@@ -182,7 +182,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 {!isMobile && (
                     <div>
                         <div className="text-xs uppercase tracking-[0.34em] text-neutral-500">Session Complete</div>
-                        <div className="mt-1 text-4xl font-black text-stone-100">Hold The Time</div>
+                        <div className="mt-1 text-4xl font-black text-stone-100">Hold The Tempo</div>
                     </div>
                 )}
                 <div className="flex items-end gap-3 md:gap-4 px-3 rounded-2xl w-full md:w-auto">

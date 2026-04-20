@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 const GAMES = [
     { id: "poly-rhythm", label: "Polyrhythm", href: "/poly-rhythm" },
-    { id: "hold-the-time", label: "Hold The Time", href: "/hold-the-time" },
+    { id: "hold-the-time", label: "Hold The Tempo", href: "/hold-the-time" },
     { id: "tempo-recognition", label: "Tempo Recognition", href: "/tempo-recognition" },
 ];
 
