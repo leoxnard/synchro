@@ -341,7 +341,7 @@ export default function HoldTheTime() {
     return (
         <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
-                className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-950/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
+                className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-900/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
                     style={{
                         minHeight: isMobileLayoutEnabled ? '0' : '32rem',
                         maxHeight: isMobileLayoutEnabled ? '100%' : '55rem',

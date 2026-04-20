@@ -71,7 +71,7 @@ export default function PolyrhythmGame() {
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
     const windowMinHeight = isMobileLayoutEnabled
         ? undefined
-        : (gameState === 'latencyTest' ? '55rem' : '30rem');
+        : (gameState === 'latencyTest' ? '55rem' : '20rem');
     const windowMaxHeight = isMobileLayoutEnabled
         ? undefined
         : '55rem';
