@@ -52,8 +52,8 @@ export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm, phase
                 <div 
                     className={`relative flex h-64 w-64 m-2 items-center justify-center rounded-full border md:h-72 md:w-72 transition-all duration-150 ease-out ${
                         isPressed 
-                        ? 'scale-[0.97] border-white/20 bg-white/[0.05]' 
-                        : 'scale-100 border-white/10 bg-black/25'
+                            ? 'scale-[0.97] border-white/20 bg-white/[0.05]' 
+                            : 'scale-100 border-white/10 bg-black/25'
                     }`}
                 >
                     <div className={`absolute inset-6 rounded-full border transition-colors duration-150 ${isPressed ? 'border-white/20' : 'border-white/10'}`} />

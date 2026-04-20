@@ -27,7 +27,7 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
                     </span>
                     <span className="flex items-center gap-2 text-fuchsia-400">
                         <div className="w-3 h-3 rounded-sm bg-fuchsia-500/40 border border-fuchsia-500"></div>
-                        The "One"
+                        Downbeat
                     </span>
                 </div>
             </div>

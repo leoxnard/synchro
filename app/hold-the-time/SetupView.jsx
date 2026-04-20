@@ -1,6 +1,3 @@
-import React, { useState, useEffect } from 'react';
-
-import { useIsMobile } from "../hooks/useIsMobile";
 import { BEATS } from "./constants/gameConfig";
 import NumberStepper from "../components/NumberStepper";
 import { MdVolumeUp } from 'react-icons/md';

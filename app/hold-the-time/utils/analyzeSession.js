@@ -35,8 +35,8 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
         correctedTime: null,
         deltaMs: null,
         phase: expectedTime < silenceStartGridMs - 0.1 ? 'listening' 
-             : expectedTime < silenceStartGridMs + silentMs - 0.1 ? 'silence' 
-             : 'return',
+            : expectedTime < silenceStartGridMs + silentMs - 0.1 ? 'silence' 
+                : 'return',
         missed: true
     }));
 

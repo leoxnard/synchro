@@ -45,7 +45,6 @@ export default function HoldTheTime() {
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
     const isMobileLayoutEnabled = isClient && isMobile;
-    const isGameplayActive = gameState === 'running';
 
     const stopPreview = () => {
         if (previewAudioRef.current) {
@@ -142,7 +141,7 @@ export default function HoldTheTime() {
             try {
                 sourceNodeRef.current.stop();
                 sourceNodeRef.current.disconnect();
-            } catch (e) {}
+            } catch {}
             sourceNodeRef.current = null;
         }
         
@@ -342,14 +341,14 @@ export default function HoldTheTime() {
         <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
                 className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-900/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
-                    style={{
-                        minHeight: isMobileLayoutEnabled ? '0' : '32rem',
-                        maxHeight: isMobileLayoutEnabled ? '100%' : '55rem',
-                        height: isMobileLayoutEnabled ? '100%' : undefined,
-                        width: isMobileLayoutEnabled ? '100%' : (gameState === 'results' ? '55rem' : '28rem'),
-                        transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                >
+                style={{
+                    minHeight: isMobileLayoutEnabled ? '0' : '32rem',
+                    maxHeight: isMobileLayoutEnabled ? '100%' : '55rem',
+                    height: isMobileLayoutEnabled ? '100%' : undefined,
+                    width: isMobileLayoutEnabled ? '100%' : (gameState === 'results' ? '55rem' : '28rem'),
+                    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+            >
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
                     <div className="tempo-orb tempo-orb-a" />
                     <div className="tempo-orb tempo-orb-b" />
@@ -359,9 +358,9 @@ export default function HoldTheTime() {
 
                 <div className={`relative z-10 flex flex-1 flex-col transition-all duration-500 
                     ${isMobileLayoutEnabled 
-                        ? 'p-2 h-full min-h-0'
-                        : 'p-4 min-h-[30rem] md:min-h-[32rem]'
-                    }`}
+            ? 'p-2 h-full min-h-0'
+            : 'p-4 min-h-[30rem] md:min-h-[32rem]'
+        }`}
                 >
                     <div className="flex flex-1 h-full min-h-0 flex-col gap-4 m-2">
                         {gameState === 'setup' && (
