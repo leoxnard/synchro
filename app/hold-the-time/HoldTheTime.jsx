@@ -20,6 +20,8 @@ export default function HoldTheTime() {
     const [tapCount, setTapCount] = useState(0);
     const [sessionProgress, setSessionProgress] = useState(0);
     const [analysis, setAnalysis] = useState(null);
+
+    const [tapRipples, setTapRipples] = useState([]);
     
     const [previewingBeatId, setPreviewingBeatId] = useState(null);
     const previewAudioRef = useRef(null);
@@ -42,6 +44,8 @@ export default function HoldTheTime() {
 
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
+    const isMobileLayoutEnabled = isClient && isMobile;
+    const isGameplayActive = gameState === 'running';
 
     const stopPreview = () => {
         if (previewAudioRef.current) {
@@ -98,7 +102,7 @@ export default function HoldTheTime() {
                     recordTap({ isKeyboard: true }); 
                 }
             } else if (gameState === 'results') {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     startSession();
                 }
@@ -156,6 +160,8 @@ export default function HoldTheTime() {
     };
 
     const spawnRipple = (event) => {
+        if (event && event.isKeyboard) return;
+
         let x = 50;
         let y = 50;
         if (event && event.currentTarget && !event.isKeyboard) {
@@ -318,7 +324,9 @@ export default function HoldTheTime() {
             playLabel = 'Keep the pulse';
             const elapsed = sessionProgress - silenceStartRef.current;
             const silentMs = silentBars * beatMs * 4;
-            progressPct = clamp((elapsed / silentMs) * 100, 0, 100);
+            
+            progressPct = clamp(100 - ((elapsed / silentMs) * 100), 0, 100);
+            
         } else if (phase === 'return') {
             playSubLabel = 'Return Phase';
             playLabel = 'Beat returns';
@@ -334,10 +342,14 @@ export default function HoldTheTime() {
         <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
                 className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-950/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
-                style={{ 
-                    maxWidth: gameState === 'results' ? '45rem' : '28rem' 
-                }}
-            >
+                    style={{
+                        minHeight: isMobileLayoutEnabled ? '0' : '32rem',
+                        maxHeight: isMobileLayoutEnabled ? '100%' : '55rem',
+                        height: isMobileLayoutEnabled ? '100%' : undefined,
+                        width: isMobileLayoutEnabled ? '100%' : (gameState === 'results' ? '55rem' : '28rem'),
+                        transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                >
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
                     <div className="tempo-orb tempo-orb-a" />
                     <div className="tempo-orb tempo-orb-b" />
@@ -345,9 +357,13 @@ export default function HoldTheTime() {
                     <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
                 </div>
 
-                <div className="relative z-10 flex min-h-[30rem] md:min-h-[32rem] flex-col p-4 md:p-6 transition-all duration-500">
-                    
-                    <div className="flex flex-1 min-h-0 flex-col gap-4">
+                <div className={`relative z-10 flex flex-1 flex-col transition-all duration-500 
+                    ${isMobileLayoutEnabled 
+                        ? 'p-2 h-full min-h-0'
+                        : 'p-4 min-h-[30rem] md:min-h-[32rem]'
+                    }`}
+                >
+                    <div className="flex flex-1 h-full min-h-0 flex-col gap-4 m-2">
                         {gameState === 'setup' && (
                             <SetupView
                                 triggerTaps={triggerTaps}
@@ -372,6 +388,8 @@ export default function HoldTheTime() {
                                 beatName={selectedBeat.name}
                                 bpm={selectedBeat.bpm}
                                 isMobile={isMobile}
+                                setTapRipples={setTapRipples}
+                                phase={phase}
                             />
                         )}
 
@@ -385,6 +403,19 @@ export default function HoldTheTime() {
                             />
                         )}
                     </div>
+                    {gameState === 'running' && tapRipples.map((ripple) => (
+                        <div
+                            key={ripple.id}
+                            className="pointer-events-none absolute z-20 h-24 w-24 rounded-full"
+                            style={{
+                                left: `${ripple.x}%`, top: `${ripple.y}%`,
+                                transform: 'translate(-50%, -50%)',
+                                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%)',
+                                filter: 'drop-shadow(0 0 12px rgba(125,211,252,0.55))',
+                                animation: 'tapRipple 0.35s ease-out forwards',
+                            }}
+                        />
+                    ))}
                 </div>
             </div>
 
@@ -397,49 +428,42 @@ export default function HoldTheTime() {
                     pointer-events: none;
                     opacity: 0;
                 }
-
                 .tempo-orb-a {
-                    width: 16rem;
-                    height: 16rem;
-                    left: -3rem;
-                    top: -4rem;
+                    width: 16rem; height: 16rem; left: -3rem; top: -4rem;
                     background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
                     animation: orbFloatA 9s ease-in-out infinite;
                 }
-
                 .tempo-orb-b {
-                    width: 18rem;
-                    height: 18rem;
-                    right: -4rem;
-                    bottom: -5rem;
+                    width: 18rem; height: 18rem; right: -4rem; bottom: -5rem;
                     background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
                     animation: orbFloatB 11s ease-in-out infinite;
                 }
-
                 .tempo-orb-c {
-                    width: 13rem;
-                    height: 13rem;
-                    right: 28%;
-                    top: 32%;
+                    width: 13rem; height: 13rem; right: 28%; top: 32%;
                     background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
                     animation: orbFloatC 8s ease-in-out infinite;
                 }
-
                 @keyframes orbFloatA {
                     0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
                     35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
                     70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
                 }
-
                 @keyframes orbFloatB {
                     0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
                     40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
                     75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
                 }
-
                 @keyframes orbFloatC {
                     0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
                     50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
+                }
+                .tap-ripple-effect {
+                    position: absolute; z-index: 20; height: 6rem; width: 6rem;
+                    border-radius: 9999px; pointer-events: none;
+                    transform: translate(-50%, -50%);
+                    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%);
+                    filter: drop-shadow(0 0 12px rgba(125,211,252,0.55));
+                    animation: tapRipple 0.35s ease-out forwards;
                 }
                 @keyframes tapRipple {
                     0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }

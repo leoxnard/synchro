@@ -58,7 +58,7 @@ function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, 
 function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
         <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1">
-            <div className="grid gap-2">
+            <div className="grid gap-2 grid-cols-2">
                 <NumberStepper label="Taps to Trigger" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact />
                 <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact />
             </div>
@@ -76,7 +76,6 @@ function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, s
             </div>
             <div className="mt-auto flex flex-col items-center">
                 <button type="button" onClick={onStart} className="w-full rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 active:scale-95">Start</button>
-                <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-500">Hold speaker icon to preview</div>
             </div>
         </div>
     );

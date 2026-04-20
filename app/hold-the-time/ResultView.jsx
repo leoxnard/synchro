@@ -169,8 +169,9 @@ function ScoreGraph({ label, currentError, inflection, steepness, accuracyLinear
     );
 }
 
-export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBackToSetup }) {
+export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBackToSetup, isMobile }) {
     const [showAnalysis, setShowAnalysis] = useState(false);
+    const isDebugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
     if (!analysis) return null;
 
@@ -178,25 +179,24 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
         <div className="w-full max-w-4xl mx-auto h-full overflow-y-auto pr-1 md:pr-2 flex flex-col">
             
             <div className="mb-4 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
-                <div>
-                    <div className="text-[11px] uppercase tracking-[0.34em] text-neutral-500">Session Complete</div>
-                    <div className="mt-1 text-3xl font-black text-stone-100 md:text-4xl">Hold The Time</div>
-                </div>
-                
-                <div className="flex items-end gap-3 md:gap-4 bg-white/[0.02] border border-white/5 p-3 rounded-2xl w-full md:w-auto">
-                    <div className="text-right flex-1 md:flex-none">
-                        <div className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-neutral-500">Consistency</div>
-                        <div className="mt-1 text-2xl md:text-3xl font-black text-amber-200/80">{analysis.consistencyScore || 0}</div>
+                {!isMobile && (
+                    <div>
+                        <div className="text-xs uppercase tracking-[0.34em] text-neutral-500">Session Complete</div>
+                        <div className="mt-1 text-4xl font-black text-stone-100">Hold The Time</div>
                     </div>
-                    <div className="w-px h-10 bg-white/10 hidden md:block"></div>
-                    <div className="text-right flex-1 md:flex-none">
-                        <div className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-neutral-500">Accuracy</div>
-                        <div className="mt-1 text-2xl md:text-3xl font-black text-emerald-200/80">{analysis.accuracyScore || 0}</div>
+                )}
+                <div className="flex items-end gap-3 md:gap-4 px-3 rounded-2xl w-full md:w-auto">
+                    <div className="text-center flex-1 md:flex-none opacity-80">
+                        <div className="text-[11px] md:text-[10px] uppercase tracking-[0.2em] text-neutral-500">Consistency</div>
+                        <div className="mt-1 text-6xl md:text-4xl font-black text-neutral-200">{analysis.consistencyScore || 0}</div>
                     </div>
-                    <div className="w-px h-12 bg-white/10 hidden md:block"></div>
-                    <div className="text-right flex-1 md:flex-none">
-                        <div className="text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-cyan-400/80">Overall</div>
-                        <div className="mt-1 text-4xl md:text-5xl font-black text-cyan-100">{analysis.score || 0}</div>
+                    <div className="text-center flex-1 md:flex-none opacity-80">
+                        <div className="text-[11px] md:text-[10px] uppercase tracking-[0.2em] text-neutral-500">Accuracy</div>
+                        <div className="mt-1 text-6xl md:text-4xl font-black text-neutral-200">{analysis.accuracyScore || 0}</div>
+                    </div>
+                    <div className="text-center flex-1 md:flex-none">
+                        <div className="text-[11px] md:text-[11px] uppercase tracking-[0.22em] text-cyan-400/80">Overall</div>
+                        <div className="mt-1 text-6xl md:text-6xl font-black text-cyan-100">{analysis.score || 0}</div>
                     </div>
                 </div>
             </div>
@@ -212,16 +212,14 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 missedBeats={analysis.missedBeats || []}
             />
 
-            {!showAnalysis ? (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                    <StatCard label="Start Delay Fix" value={formatMs(analysis.calibrationMs)} />
-                    <StatCard label="Avg Offset" value={formatMs(analysis.averageOffsetMs)} />
-                    <StatCard label="Early Taps" value={analysis.earlyCount} />
-                    <StatCard label="Late Taps" value={analysis.lateCount} />
-                    <StatCard label="Missed/Extra" value={analysis.totalFaults} highlight={analysis.totalFaults > 0} />
-                    <StatCard label="Selected Beat" value={`${selectedBeat?.bpm} BPM`} />
-                </div>
-            ) : (
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <StatCard label="Avg Offset" value={formatMs(analysis.averageOffsetMs)} />
+                <StatCard label="Early/Late Taps" value={`${analysis.earlyCount}/${analysis.lateCount}`} />
+                <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length}/${analysis.extraTaps.length}`} highlight={analysis.totalFaults > 0} />
+                <StatCard label="Beat Tempo" value={`${selectedBeat?.bpm} BPM`} />
+            </div>
+
+            {showAnalysis && (
                 <div className="mt-3 flex flex-col gap-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
@@ -260,13 +258,15 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
             )}
 
             <div className="mt-auto pt-4 flex flex-wrap justify-center gap-2 pb-2">
-                <button 
-                    type="button" 
-                    onClick={() => setShowAnalysis(!showAnalysis)} 
-                    className={`rounded-full border px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.22em] transition ${showAnalysis ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]'}`}
-                >
-                    {showAnalysis ? 'Hide Details' : 'Math Details'}
-                </button>
+                {!isMobile && isDebugMode && (
+                    <button 
+                        type="button" 
+                        onClick={() => setShowAnalysis(!showAnalysis)} 
+                        className={`rounded-full border px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.22em] transition ${showAnalysis ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]'}`}
+                    >
+                        {showAnalysis ? 'Hide Details' : 'Math Details'}
+                    </button>
+                )}
                 <button type="button" onClick={onPlayAgain} className="rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 transition-transform hover:scale-[1.02] active:scale-95">Play Again</button>
                 <button type="button" onClick={onBackToSetup} className="rounded-full border border-white/10 bg-white/[0.03] px-6 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-200 transition hover:bg-white/[0.06]">Back</button>
             </div>

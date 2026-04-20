@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
+export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm, phase }) {
     const [isPressed, setIsPressed] = useState(false);
 
     useEffect(() => {
@@ -40,7 +40,9 @@ export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                     <div 
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 transition-all duration-75" 
+                        className={`h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 ${
+                            phase === 'listening' ? 'transition-all duration-300 ease-out' : ''
+                        }`} 
                         style={{ width: `${progressPct}%` }} 
                     />
                 </div>
@@ -69,11 +71,11 @@ export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm }) {
     );
 }
 
-function PlayMobile({ subLabel, label, progressPct, onTap, beatName, bpm }) {
+function PlayMobile({ subLabel, label, progressPct, onTap, phase }) {
     return (
         <div
             role="button" tabIndex={0} onPointerDown={onTap}
-            className="relative flex h-full min-h-0 flex-col rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_bottom,rgba(16,185,129,0.10),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 outline-none touch-none select-none"
+            className="relative flex flex-1 h-full flex-col rounded-[1.8rem] p-4 outline-none touch-none select-none"
             style={{ touchAction: 'none' }}
         >
             <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.22em] text-neutral-500">
@@ -81,19 +83,12 @@ function PlayMobile({ subLabel, label, progressPct, onTap, beatName, bpm }) {
                 <span>{label}</span>
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 transition-all duration-75" style={{ width: `${progressPct}%` }} />
-            </div>
-
-            <div className="flex flex-1 items-center justify-center">
-                <div className="relative flex h-52 w-52 items-center justify-center rounded-full border border-white/10 bg-black/25">
-                    <div className="absolute inset-5 rounded-full border border-white/10" />
-                    <div className="absolute inset-10 rounded-full border border-cyan-200/10" />
-                    <div className="text-center">
-                        <div className="text-[11px] uppercase tracking-[0.34em] text-neutral-500">{beatName}</div>
-                        <div className="mt-2 text-5xl font-black text-stone-100">{bpm}</div>
-                        <div className="mt-2 text-[11px] uppercase tracking-[0.24em] text-neutral-500">BPM</div>
-                    </div>
-                </div>
+                <div 
+                    className={`h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300 ${
+                        phase === 'listening' ? 'transition-all duration-300 ease-out' : ''
+                    }`} 
+                    style={{ width: `${progressPct}%` }} 
+                />
             </div>
         </div>
     );

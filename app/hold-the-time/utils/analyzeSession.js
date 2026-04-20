@@ -25,10 +25,10 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
     const returnMs = returnBars * 4 * beatMs;
     const sessionEndGridMs = silenceStartGridMs + silentMs + returnMs;
 
-    const uiStartMs = Math.max(0, silenceStartGridMs - (4 * beatMs));
+    const uiStartMs = Math.max(startGridMs, silenceStartGridMs - (4 * beatMs));
     
     const expectedBeats = [];
-    for (let t = uiStartMs; t <= sessionEndGridMs + 0.001; t += beatMs) {
+    for (let t = 0; t <= sessionEndGridMs + 0.001; t += beatMs) {
         expectedBeats.push(t);
     }
 
