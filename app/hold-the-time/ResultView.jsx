@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SCORING_CONFIG } from './constants/gameConfig';
 import { formatMs, clamp } from './utils/mathHelpers';
+import { on } from 'events';
 
 function StatCard({ label, value, highlight = false }) {
     return (
@@ -169,8 +170,7 @@ function ScoreGraph({ label, currentError, inflection, steepness, accuracyLinear
     );
 }
 
-export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBackToSetup, isMobile }) {
-    const [showAnalysis, setShowAnalysis] = useState(false);
+export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBackToSetup, isMobile, showAnalysis, onToggleAnalysis }) {
     const isDebugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
     if (!analysis) return null;
@@ -260,7 +260,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 {!isMobile && isDebugMode && (
                     <button 
                         type="button" 
-                        onClick={() => setShowAnalysis(!showAnalysis)} 
+                        onClick={() => onToggleAnalysis()} 
                         className={`rounded-full border px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.22em] transition ${showAnalysis ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]'}`}
                     >
                         {showAnalysis ? 'Hide Details' : 'Math Details'}

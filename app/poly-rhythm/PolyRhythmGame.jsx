@@ -66,15 +66,19 @@ export default function PolyrhythmGame() {
     const playingRowWidthPx = (tracks.length * circleSizePx) + (Math.max(0, tracks.length - 1) * gapPx);
     const inGameWidthRem = Math.max(31, (playingRowWidthPx + 84) / 16);
     const clampedInGameWidthRem = Math.min(inGameWidthRem, 46);
-    const windowTargetWidth = gameState === 'setup'
-        ? '31rem'
+
+    const windowTargetWidth = gameState === 'setup' ? '31rem' 
+        : gameState === 'latencyTest' ? '46rem'
+        : gameState === 'result' ? '46rem'
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
-    const windowMinHeight = isMobileLayoutEnabled
-        ? undefined
-        : (gameState === 'latencyTest' ? '55rem' : '20rem');
-    const windowMaxHeight = isMobileLayoutEnabled
-        ? undefined
-        : '55rem';
+
+    const getWindowTargetHeight = () => {
+        if (gameState === 'setup') return '38rem';
+        if (gameState === 'latencyTest') return '46rem';
+        if (gameState === 'result') return '48rem';
+        return '26rem';
+    };
+    const windowTargetHeight = getWindowTargetHeight();
 
     const getAssignedKey = (index, total) => {
         const configs = {
@@ -751,25 +755,30 @@ export default function PolyrhythmGame() {
     return (
         <div className={`w-full h-full min-h-0 px-0 py-0 md:px-4 md:py-4 text-neutral-100 font-sans flex items-stretch justify-stretch md:items-center md:justify-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
             <div 
-                className={`tempo-window isolate flex flex-col w-full min-w-0 min-h-0 rounded-[1.7rem] border border-white/10 bg-neutral-900/80 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur`}
+                className={`tempo-window relative overflow-hidden isolate rounded-[1.7rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                 style={{
-                    minHeight: isMobileLayoutEnabled ? '0' : windowMinHeight,
-                    maxHeight: isMobileLayoutEnabled ? '100%' : windowMaxHeight,
-                    width: isMobileLayoutEnabled ? '100%' : `min(100%, ${windowTargetWidth})`,
-                    maxWidth: isMobileLayoutEnabled ? 'none' : (gameState === 'setup' ? '31rem' : `${clampedInGameWidthRem.toFixed(2)}rem`),
-                    height: isMobileLayoutEnabled ? '100%' : undefined,
-                    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                    width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
+                    height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
+                    maxWidth: '100vw',
+                    maxHeight: '100dvh',
                 }}
             >
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] w-full h-full">
                     <div className="tempo-orb tempo-orb-a" />
                     <div className="tempo-orb tempo-orb-b" />
                     <div className="tempo-orb tempo-orb-c" />
                     <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
                 </div>
-
-                <div className={`relative z-10 flex-1 min-h-0 ${isMobileLayoutEnabled ? 'p-2 md:p-7' : 'p-5 md:p-7'} ${isMobileLayoutEnabled ? 'rounded-[inherit]' : 'rounded-[1.7rem]'} flex flex-col items-stretch ${isMobileLayoutEnabled ? 'justify-start' : 'justify-center'} ${isGameplayActive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-
+                <div 
+                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-stretch ${isMobileLayoutEnabled ? 'p-2 md:p-7 justify-start' : 'p-5 md:p-7 justify-center'} ${isGameplayActive ? 'overflow-hidden' : 'overflow-y-auto'}`}
+                    style={{
+                        width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
+                        height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
+                        maxWidth: '100vw',
+                        maxHeight: '100dvh',
+                        borderRadius: isMobileLayoutEnabled ? 'inherit' : '1.7rem'
+                    }}
+                >
                     {gameState === 'setup' && (
                         <SetupView
                             tracks={tracks}

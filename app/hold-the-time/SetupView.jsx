@@ -31,8 +31,8 @@ function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, 
         <div className="flex h-full flex-col overflow-y-auto pr-1">
             <span className="text-3xl font-light text-neutral-400 mb-3 text-center tracking-widest border-b border-white/10 pb-2">Hold The Tempo</span>
             <div className="grid gap-3 pb-3 md:grid-cols-2 border-b border-white/10">
-                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact />
-                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact />
+                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} />
+                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} />
             </div>
             <div className="grid gap-3 md:grid-cols-2 py-3">
                 {BEATS.map((beat) => (
@@ -57,8 +57,8 @@ function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, s
     return (
         <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1">
             <div className="grid gap-2 grid-cols-2">
-                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact />
-                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact />
+                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact={true} />
+                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact={true} />
             </div>
             <div className="grid grid-cols-2 gap-2">
                 {BEATS.map((beat) => (

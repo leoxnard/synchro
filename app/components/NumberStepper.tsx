@@ -40,7 +40,7 @@ export default function NumberStepper({
     };
 
     return (
-        <div className={`flex flex-col gap-1 relative group ${className}`}>
+        <div className={`flex flex-col gap-1 relative group text-stone-100 ${className}`}>
             {label && (
                 <label
                     htmlFor={inputId}

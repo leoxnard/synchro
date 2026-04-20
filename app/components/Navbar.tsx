@@ -35,8 +35,8 @@ export default function Navbar() {
                             href={game.href}
                             className={`px-4 py-2 font-medium transition-colors ${
                                 pathname === game.href
-                                    ? 'text-neutral-300'
-                                    : 'text-neutral-500 hover:text-neutral-300'
+                                    ? 'text-red-700 dark:text-red-300'
+                                    : 'text-red-900 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
                             }`}
                         >
                             {game.label}
@@ -56,8 +56,8 @@ export default function Navbar() {
                         href={game.href}
                         className={`px-4 py-2 font-medium transition-colors ${
                             pathname === game.href
-                                ? 'text-neutral-300'
-                                : 'text-neutral-500 hover:text-neutral-300'
+                                ? 'text-neutral-500 dark:text-neutral-300'
+                                : 'text-neutral-900 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
                         }`}
                     >
                         {game.label}
@@ -71,8 +71,8 @@ export default function Navbar() {
                                 href={page.href}
                                 className={`px-4 py-2 font-medium transition-colors ${
                                     pathname === page.href
-                                        ? 'text-neutral-300'
-                                        : 'text-neutral-500 hover:text-neutral-300'
+                                        ? 'text-neutral-500 dark:text-neutral-300'
+                                        : 'text-neutral-900 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
                                 }`}
                             >
                                 {page.label}

@@ -16,6 +16,7 @@ export default function HoldTheTime() {
     const [triggerTaps, setTriggerTaps] = useState(8);
     const [silentBars, setSilentBars] = useState(4);
     const [gameState, setGameState] = useState('setup');
+    const [showAnalysis, setShowAnalysis] = useState(false);
     const [phase, setPhase] = useState('listening');
     const [tapCount, setTapCount] = useState(0);
     const [sessionProgress, setSessionProgress] = useState(0);
@@ -41,6 +42,23 @@ export default function HoldTheTime() {
     const audioCtxRef = useRef(null);
     const sourceNodeRef = useRef(null);
     const gainNodeRef = useRef(null);
+
+    const getWindowTargetWidth = () => {
+        if (gameState === 'results') return '55rem';
+        return '28rem';
+    };
+    
+    const getWindowTargetHeight = () => {
+        if (gameState === 'setup') return '36rem';
+        if (gameState === 'running') return '32rem';
+        if (gameState === 'results') {
+            return showAnalysis ? '49rem' : '32rem'; 
+        }
+        return '32rem';
+    };
+
+    const windowTargetWidth = getWindowTargetWidth();
+    const windowTargetHeight = getWindowTargetHeight();
 
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
@@ -261,6 +279,7 @@ export default function HoldTheTime() {
     const startSession = async () => {
         stopPreview();
         clearSession();
+        setShowAnalysis(false);
         setGameState('running');
         setPhase('listening');
         sessionStartRef.current = performance.now();
@@ -301,6 +320,7 @@ export default function HoldTheTime() {
     const restartToSetup = () => {
         clearSession();
         setAnalysis(null);
+        setShowAnalysis(false);
         setGameState('setup');
         setPhase('listening');
     };
@@ -340,27 +360,29 @@ export default function HoldTheTime() {
     return (
         <div className="w-full h-full px-2 py-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
-                className="relative mx-auto w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-neutral-900/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-500 ease-in-out"
+                className="relative overflow-hidden isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 style={{
-                    minHeight: isMobileLayoutEnabled ? '0' : '32rem',
-                    maxHeight: isMobileLayoutEnabled ? '100%' : '55rem',
-                    height: isMobileLayoutEnabled ? '100%' : undefined,
-                    width: isMobileLayoutEnabled ? '100%' : (gameState === 'results' ? '55rem' : '28rem'),
-                    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                    width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
+                    height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
+                    maxWidth: '100vw',
+                    maxHeight: '100dvh'
                 }}
             >
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] w-full h-full">
                     <div className="tempo-orb tempo-orb-a" />
                     <div className="tempo-orb tempo-orb-b" />
                     <div className="tempo-orb tempo-orb-c" />
                     <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
                 </div>
-
-                <div className={`relative z-10 flex flex-1 flex-col transition-all duration-500 
-                    ${isMobileLayoutEnabled 
-            ? 'p-2 h-full min-h-0'
-            : 'p-4 min-h-[30rem] md:min-h-[32rem]'
-        }`}
+                <div 
+                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col ${isMobileLayoutEnabled ? 'p-2 justify-start' : 'p-4 justify-center'} ${gameState === 'running' ? 'overflow-hidden' : 'overflow-y-auto'}`}
+                    style={{
+                        width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
+                        height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
+                        maxWidth: '100vw',
+                        maxHeight: '100dvh',
+                        borderRadius: isMobileLayoutEnabled ? 'inherit' : '1.6rem'
+                    }}
                 >
                     <div className="flex flex-1 h-full min-h-0 flex-col gap-4 m-2">
                         {gameState === 'setup' && (
@@ -399,6 +421,8 @@ export default function HoldTheTime() {
                                 onPlayAgain={startSession}
                                 onBackToSetup={restartToSetup}
                                 isMobile={isMobile}
+                                showAnalysis={showAnalysis}
+                                onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
                             />
                         )}
                     </div>
