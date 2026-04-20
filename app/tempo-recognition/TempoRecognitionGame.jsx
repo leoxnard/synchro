@@ -151,12 +151,14 @@ export default function TempoRecognitionGame() {
                     )}
                     {gameState === 'intro' && (
                         <div className="h-full w-full flex flex-col items-center justify-center text-center gap-4">
-                            <h2 className="mb-5 text-4xl font-light tracking-widest text-white md:text-5xl">Tempo Recognition</h2>
+                            {!isMobileLayoutEnabled && (
+                                <h2 className="mb-5 text-4xl font-light tracking-widest text-white md:text-5xl">Tempo Recognition</h2>
+                            )}
                             <button
                                 onClick={startRound}
                                 className="rounded-full bg-stone-200 px-8 py-2.5 text-xs font-bold uppercase tracking-[0.18em] text-neutral-900 transition-transform hover:scale-[1.03] active:scale-95"
                             >
-                                Start Session
+                                Start Game
                             </button>
                         </div>
                     )}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SlArrowRight } from "react-icons/sl";
+import { SlArrowRight, SlArrowLeft } from "react-icons/sl";
 
 export default function AdjustmentView({ startTempo, onSubmit, minTempo, maxTempo, audioCtx }) {
     const [tempo, setTempo] = useState(startTempo);
@@ -89,13 +89,43 @@ export default function AdjustmentView({ startTempo, onSubmit, minTempo, maxTemp
         tempoRef.current = newTempo;
     };
 
+    const handleStep = (delta) => {
+        if (audioCtxRef.current && audioCtxRef.current.state !== 'running') {
+            audioCtxRef.current.resume().catch(() => {});
+        }
+        
+        const newTempo = Math.max(minTempo, Math.min(maxTempo, tempo + delta));
+        setTempo(newTempo);
+        tempoRef.current = newTempo;
+    };
+
     return (
         <div className="h-full w-full flex flex-col items-center justify-center">
             <div className="relative w-full h-full max-w-lg text-center flex flex-col justify-center px-4 gap-5">
 
-                <div className="mb-1 text-6xl font-black text-stone-200 md:text-8xl gap-2 flex flex-col items-center justify-center">
-                    {tempo}
-                    <p className="mb-7 text-xs uppercase tracking-[0.28em] text-neutral-500">BPM</p>
+                <div className="flex flex-col items-center justify-center mb-2">
+                    <div className="flex items-center justify-center gap-4 md:gap-6">
+                        <button 
+                            onClick={() => handleStep(-1)}
+                            className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/5 bg-white/[0.03] text-2xl font-light text-neutral-400 transition-all hover:bg-white/[0.08] hover:text-stone-200 active:scale-95"
+                            aria-label="Tempo verringern"
+                        >
+                            <SlArrowLeft />
+                        </button>
+                        
+                        <div className="text-6xl font-black text-stone-200 md:text-8xl w-[3.5ch] text-center tabular-nums">
+                            {tempo}
+                        </div>
+
+                        <button 
+                            onClick={() => handleStep(1)}
+                            className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/5 bg-white/[0.03] text-2xl font-light text-neutral-400 transition-all hover:bg-white/[0.08] hover:text-stone-200 active:scale-95"
+                            aria-label="Tempo erhöhen"
+                        >
+                            <SlArrowRight />
+                        </button>
+                    </div>
+                    <p className="mt-4 text-xs uppercase tracking-[0.28em] text-neutral-500">BPM</p>
                 </div>
 
                 <div className="mx-auto mb-7 w-full max-w-md rounded-2xl px-4 py-4">

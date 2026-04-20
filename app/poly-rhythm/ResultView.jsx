@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const DEBUG_RESULTS_ENABLED = true;
+const DEBUG_RESULTS_ENABLED = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
 export default function ResultView({
     score,

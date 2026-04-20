@@ -75,7 +75,7 @@ export default function PolyrhythmGame() {
     const getWindowTargetHeight = () => {
         if (gameState === 'setup') return '38rem';
         if (gameState === 'latencyTest') return '46rem';
-        if (gameState === 'result') return '48rem';
+        if (gameState === 'result') return '45rem';
         return '26rem';
     };
     const windowTargetHeight = getWindowTargetHeight();
