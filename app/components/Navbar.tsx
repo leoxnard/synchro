@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 
 const GAMES = [
     { id: "poly-rhythm", label: "Polyrhythm", href: "/poly-rhythm" },
-    { id: "tempo-recognition", label: "Tempo Recognition", href: "/tempo-recognition" },
     { id: "hold-the-time", label: "Hold The Time", href: "/hold-the-time" },
+    { id: "tempo-recognition", label: "Tempo Recognition", href: "/tempo-recognition" },
 ];
 
 const OTHER_PAGES = [
