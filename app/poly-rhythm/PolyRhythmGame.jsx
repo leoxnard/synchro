@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import SetupPhase from './SetupPhase/SetupPhase';
+import SetupPhase from './SetupPhase';
 import PlayingPhase from './PlayingPhase';
 import ResultPhase from './ResultPhase';
 import LatencyTestPhase from './LatencyTestPhase';
