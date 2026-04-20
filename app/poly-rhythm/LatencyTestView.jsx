@@ -50,7 +50,7 @@ const getAverageColor = (value, minValue, maxValue) => {
     return `hsl(${hue} 80% 60%)`;
 };
 
-export default function LatencyTestPhase({ onClose }) {
+export default function LatencyTestView({ onClose }) {
     const [nowMs, setNowMs] = useState(0);
     const [inputEvents, setInputEvents] = useState([]);
     const [pressedKeyHistory, setPressedKeyHistory] = useState([]);

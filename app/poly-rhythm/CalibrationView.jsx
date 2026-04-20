@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-export default function CalibrationPhase({ onComplete, onCancel }) {
+export default function CalibrationView({ onComplete, onCancel }) {
     const [step, setStep] = useState('intro');
     const [progress, setProgress] = useState(0);
     const audioCtxRef = useRef(null);

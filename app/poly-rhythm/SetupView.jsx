@@ -2,7 +2,7 @@ import React from 'react';
 import NumberStepper from '../components/NumberStepper';
 import { SlArrowLeft, SlArrowRight } from 'react-icons/sl';
 
-function DesktopSetupPhase({
+function DesktopSetupView({
     tracks,
     addTrack,
     updateTrack,
@@ -129,7 +129,7 @@ function DesktopSetupPhase({
     );
 }
 
-function MobileSetupPhase({
+function MobileSetupView({
     tracks,
     addTrack,
     updateTrack,
@@ -242,12 +242,12 @@ function MobileSetupPhase({
     );
 }
 
-export default function SetupPhase(props) {
+export default function SetupView(props) {
     const isTouchPreferred = Boolean(props.isTouchPreferred);
 
     if (isTouchPreferred) {
-        return <MobileSetupPhase {...props} />;
+        return <MobileSetupView {...props} />;
     }
 
-    return <DesktopSetupPhase {...props} />;
+    return <DesktopSetupView {...props} />;
 }

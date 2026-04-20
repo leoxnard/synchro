@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import SetupPhase from './SetupPhase';
-import PlayingPhase from './PlayingPhase';
-import ResultPhase from './ResultPhase';
-import LatencyTestPhase from './LatencyTestPhase';
+import SetupView from './SetupView';
+import PlayingView from './PlayingView';
+import ResultView from './ResultView';
+import LatencyTestView from './LatencyTestView';
 
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import { computeFinalScore } from './utils/scoringEngine';
@@ -771,7 +771,7 @@ export default function PolyrhythmGame() {
                 <div className={`relative z-10 flex-1 min-h-0 ${isMobileLayoutEnabled ? 'p-2 md:p-7' : 'p-5 md:p-7'} ${isMobileLayoutEnabled ? 'rounded-[inherit]' : 'rounded-[1.7rem]'} flex flex-col items-stretch ${isMobileLayoutEnabled ? 'justify-start' : 'justify-center'} ${isGameplayActive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
 
                     {gameState === 'setup' && (
-                        <SetupPhase
+                        <SetupView
                             tracks={tracks}
                             addTrack={addTrack}
                             updateTrack={updateTrack}
@@ -793,13 +793,13 @@ export default function PolyrhythmGame() {
                     )}
 
                     {gameState === 'latencyTest' && (
-                        <LatencyTestPhase
+                        <LatencyTestView
                             onClose={abortGame}
                         />
                     )}
 
                     {(gameState === 'countIn' || gameState === 'playing' || gameState === 'practice') && (
-                        <PlayingPhase
+                        <PlayingView
                             gameState={gameState}
                             count={count}
                             tracks={tracks}
@@ -823,7 +823,7 @@ export default function PolyrhythmGame() {
                     )}
 
                     {gameState === 'result' && (
-                        <ResultPhase
+                        <ResultView
                             score={score}
                             tracks={tracks}
                             expectedTaps={expectedTaps}

@@ -90,7 +90,7 @@ function MobilePracticeNode({ track, measureDuration, startTime, isPressed }) {
     );
 }
 
-export default function PlayingPhase({
+export default function PlayingView({
     gameState,
     count,
     tracks,
