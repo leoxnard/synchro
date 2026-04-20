@@ -140,7 +140,7 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
         ? 0 
         : ((Math.round(consistencyRaw)) / 10).toFixed(1);
     
-    const finalScore = (Math.round((consistencyScore * SCORING_CONFIG.weightConsistency) + (accuracyScore * SCORING_CONFIG.weightAccuracy))).toFixed(1);
+    const finalScore = ((consistencyScore * SCORING_CONFIG.weightConsistency) + (accuracyScore * SCORING_CONFIG.weightAccuracy)).toFixed(1);
 
     const missedBeats = pairs
         .filter(p => p.missed && p.phase === 'silence')
