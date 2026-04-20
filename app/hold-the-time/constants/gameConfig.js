@@ -22,8 +22,10 @@ export const SCORING_CONFIG = {
 };
 
 export const BEATS = [
-    { id: 'solid-95', name: 'Solid 70s Drumset', bpm: 95, bars: 2, src: '/drumSamples/Solid 70s Drumset 16 95bpm 2bars.wav' },
-    { id: 'shuffle-125', name: '60s Shuffle Drumset', bpm: 125, bars: 2, src: '/drumSamples/60s Shuffle Drumset 03 125bpm 2bars.wav' },
-    { id: 'funked-105', name: 'Funked Out Drumset', bpm: 105, bars: 2, src: '/drumSamples/Funked Out Drumset 05 105bpm 2bars.wav' },
-    { id: 'funky-98', name: 'Funky Shuffle Drumset', bpm: 98, bars: 1, src: '/drumSamples/Funky Shuffle Drumset 21 98bpm 1bars.wav' },
+    { id: 'solid-95', name: 'Solid 70s Drumset', bpm: 95, src: '/drumSamples/Solid 70s Drumset 16 95bpm.wav' },
+    { id: 'shuffle-125', name: '60s Shuffle Drumset', bpm: 125, src: '/drumSamples/60s Shuffle Drumset 03 125bpm.wav' },
+    { id: 'funked-105', name: 'Funked Out Drumset', bpm: 105, src: '/drumSamples/Funked Out Drumset 05 105bpm.wav' },
+    { id: 'funky-98', name: 'Funky Shuffle Drumset', bpm: 98, src: '/drumSamples/Funky Shuffle Drumset 21 98bpm.wav' },
+    { id: 'laid-back-70', name: 'Laid Back Soul Drumset', bpm: 70, src: '/drumSamples/Laid Back Soul Break 02 70bpm.wav' },
+    { id: 'disco-120', name: 'Disco Drumset', bpm: 120, src: '/drumSamples/Disco Dreams Bridge Drums 120bpm.wav' },
 ];

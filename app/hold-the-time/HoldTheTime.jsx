@@ -280,7 +280,7 @@ export default function HoldTheTime() {
         source.buffer = audioBuffer;
         source.loop = true;
         
-        const exactLoopLengthSec = (60 / selectedBeat.bpm) * 4 * selectedBeat.bars;
+        const exactLoopLengthSec = (60 / selectedBeat.bpm) * 4 * 2;
         source.loopStart = 0;
         source.loopEnd = exactLoopLengthSec; 
         
