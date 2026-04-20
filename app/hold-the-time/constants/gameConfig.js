@@ -14,8 +14,11 @@ export const SCORING_CONFIG = {
     weightConsistency: 0.5,
     weightAccuracy: 0.5,
 
-    faultPenaltyMultiplier: 1.4,
-    earlyLateThresholdMs: 15
+    faultPenaltyMultiplier: 4, // multiplier for the penalty per fault (missed beat or extra tap) applied to the consistency score
+    earlyLateThresholdMs: 15, // ms threshold for counting as early or late tap
+
+    extraTapThresholdPct: 0.6, // below this ratio of the beat interval, it's considered an extra tap rather than a late tap
+    missingTapThresholdPct: 1.4, // above this ratio of the beat interval, it's considered a missed tap rather than a late tap
 };
 
 export const BEATS = [

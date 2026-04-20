@@ -214,8 +214,8 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
 
             <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
                 <StatCard label="Avg Offset" value={formatMs(analysis.averageOffsetMs)} />
-                <StatCard label="Early/Late Taps" value={`${analysis.earlyCount}/${analysis.lateCount}`} />
-                <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length}/${analysis.extraTaps.length}`} highlight={analysis.totalFaults > 0} />
+                <StatCard label="Early/Late Taps" value={`${analysis.earlyCount} / ${analysis.lateCount}`} />
+                <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length} / ${analysis.extraTaps.length}`} highlight={analysis.totalFaults > 0} />
                 <StatCard label="Beat Tempo" value={`${selectedBeat?.bpm} BPM`} />
             </div>
 
@@ -234,7 +234,6 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
                                 <div className="flex justify-between"><span>Error:</span> <span className="text-white">{Math.round(analysis.rawMath.averageAbsOffsetMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Multiplier:</span> <span className="text-white">x{analysis.rawMath.coveragePenalty.toFixed(2)}</span></div>
                             </div>
                         </div>
 
@@ -250,7 +249,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
                                 <div className="flex justify-between"><span>Variance:</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Penalty:</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault)}</span></div>
+                                <div className="flex justify-between"><span>Penalty:</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault) / 10}</span></div>
                             </div>
                         </div>
                     </div>
