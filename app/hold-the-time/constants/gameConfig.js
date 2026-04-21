@@ -7,8 +7,8 @@ export const SCORING_CONFIG = {
     accuracyLinearDropMs: 1200,   
 
     // --- CONSISTENCY  ---
-    consistencyInflectionPct: 0.10,
-    consistencySteepness: 4.9,
+    consistencyInflectionPct: 0.09,
+    consistencySteepness: 4.7,
     consistencyLinearDropMs: 1500,  
 
     weightConsistency: 0.5,
@@ -19,6 +19,14 @@ export const SCORING_CONFIG = {
 
     extraTapThresholdPct: 0.6, // below this ratio of the beat interval, it's considered an extra tap rather than a late tap
     missingTapThresholdPct: 1.4, // above this ratio of the beat interval, it's considered a missed tap rather than a late tap
+
+    baseSilenceBeats: 4,     // Bis zu dieser Anzahl an Schlägen gibt es keine Extrapunkte/Kulanz
+    leniencyFactor: 0.005,   // Wie stark die Kulanz danach quadratisch ansteigt (kleine Werte nutzen!)
+
+    perfectAccuracyThresholdMs: 10,   // Bis zu 10ms durchschnittliche Abweichung bleiben 100% (Score 10)
+    perfectConsistencyThresholdMs: 5, // Bis zu 5ms Standardabweichung bleiben 100% (Score 10)
+
+    downbeatAccuracyWeight: 0.2,
 };
 
 export const BEATS = [

@@ -117,19 +117,61 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
 
     const penaltyPerFault = (100 / Math.max(1, expectedSilenceBeats.length)) * SCORING_CONFIG.faultPenaltyMultiplier;
 
-    let accuracyRaw = 100;
-    const accuracyInflectionMs = beatMs * SCORING_CONFIG.accuracyInflectionPct;
-    if (averageAbsOffsetMs > 0) {
-        accuracyRaw = 100 / (1 + Math.pow(averageAbsOffsetMs / accuracyInflectionMs, SCORING_CONFIG.accuracySteepness) + (averageAbsOffsetMs / SCORING_CONFIG.accuracyLinearDropMs));
+    let leniencyMultiplier = 1.0;
+    const totalSilenceBeats = expectedSilenceBeats.length;
+    if (totalSilenceBeats > SCORING_CONFIG.baseSilenceBeats) {
+        const extraBeats = totalSilenceBeats - SCORING_CONFIG.baseSilenceBeats;
+        leniencyMultiplier += SCORING_CONFIG.leniencyFactor * Math.pow(extraBeats, 2);
     }
 
+    let generalAccuracyRaw = 100;
+    const accuracyInflectionMs = (beatMs * SCORING_CONFIG.accuracyInflectionPct) * leniencyMultiplier; 
+    
+    const effectiveOffsetMs = Math.max(0, averageAbsOffsetMs - SCORING_CONFIG.perfectAccuracyThresholdMs);
+
+    if (effectiveOffsetMs > 0) {
+        generalAccuracyRaw = 100 / (1 + Math.pow(effectiveOffsetMs / accuracyInflectionMs, SCORING_CONFIG.accuracySteepness) + (effectiveOffsetMs / SCORING_CONFIG.accuracyLinearDropMs));
+    }
+
+    // DOWNBEAT ACCURACY ---
+    const downbeatPair = pairs.find(p => p.phase === 'return');
+    let downbeatAccuracyRaw = 0;
+    let downbeatOffsetMs = beatMs; 
+    let effectiveDownbeatOffsetMs = beatMs;
+    
+    if (downbeatPair) {
+        if (!downbeatPair.missed) {
+            downbeatOffsetMs = Math.abs(downbeatPair.deltaMs);
+        }
+        
+        effectiveDownbeatOffsetMs = Math.max(0, downbeatOffsetMs - SCORING_CONFIG.perfectAccuracyThresholdMs);
+        
+        const maxDownbeatError = Math.max(1, beatMs - SCORING_CONFIG.perfectAccuracyThresholdMs); 
+        
+        downbeatAccuracyRaw = 100 * (1 - (effectiveDownbeatOffsetMs / maxDownbeatError));
+        downbeatAccuracyRaw = clamp(downbeatAccuracyRaw, 0, 100);
+        
+    } else {
+        downbeatAccuracyRaw = generalAccuracyRaw; 
+        downbeatOffsetMs = averageAbsOffsetMs;
+        effectiveDownbeatOffsetMs = effectiveOffsetMs;
+    }
+
+    const generalWeight = 1.0 - SCORING_CONFIG.downbeatAccuracyWeight;
+    let accuracyRaw = (generalAccuracyRaw * generalWeight) + (downbeatAccuracyRaw * SCORING_CONFIG.downbeatAccuracyWeight);
+
+    // --- CONSISTENCY BERECHNUNG ---
     let consistencyRawBeforePenalty = 0;
-    const consistencyInflectionMs = beatMs * SCORING_CONFIG.consistencyInflectionPct;
+    const consistencyInflectionMs = (beatMs * SCORING_CONFIG.consistencyInflectionPct) * leniencyMultiplier;
+    let effectiveStdDevMs = stdDeviationMs;
+    
     if (silenceIntervals.length > 0) {
-        if (stdDeviationMs === 0) {
+        effectiveStdDevMs = Math.max(0, stdDeviationMs - SCORING_CONFIG.perfectConsistencyThresholdMs);
+
+        if (effectiveStdDevMs === 0) {
             consistencyRawBeforePenalty = 100;
         } else {
-            consistencyRawBeforePenalty = 100 / (1 + Math.pow(stdDeviationMs / consistencyInflectionMs, SCORING_CONFIG.consistencySteepness) + (stdDeviationMs / SCORING_CONFIG.consistencyLinearDropMs));
+            consistencyRawBeforePenalty = 100 / (1 + Math.pow(effectiveStdDevMs / consistencyInflectionMs, SCORING_CONFIG.consistencySteepness) + (effectiveStdDevMs / SCORING_CONFIG.consistencyLinearDropMs));
         }
     }
     
@@ -158,9 +200,10 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
         lateCount: silencePairs.filter((p) => p.deltaMs > SCORING_CONFIG.earlyLateThresholdMs).length,
         totalFaults, extraTaps, missedBeats,
         rawMath: {
-            averageAbsOffsetMs, accuracyInflectionMs, accuracyRaw,
-            stdDeviationMs, consistencyInflectionMs, consistencyRawBeforePenalty,
-            totalFaults, penaltyPerFault
+            averageAbsOffsetMs, effectiveOffsetMs, accuracyInflectionMs, generalAccuracyRaw,
+            downbeatOffsetMs, effectiveDownbeatOffsetMs, downbeatAccuracyRaw, accuracyRaw,
+            stdDeviationMs, effectiveStdDevMs, consistencyInflectionMs, consistencyRawBeforePenalty,
+            totalFaults, penaltyPerFault, leniencyMultiplier
         }
     };
 };
