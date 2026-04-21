@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function LegalNoticePage() {
     return (
         <main className="mx-auto flex h-full w-full max-w-4xl flex-col p-4 pt-0 text-neutral-200 leading-relaxed overflow-auto">
-            <div className="mt-4 flex w-full flex-col gap-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-8 md:p-10">
+            <div className="mt-4 flex w-full flex-col gap-5 rounded-2xl border border-neutral-800 bg-black/80 dark:bg-neutral-900/60 p-8 md:p-10">
                 <h1 className="mb-4 text-4xl font-semibold tracking-tight text-neutral-100">Legal Notice</h1>
 
                 <div>

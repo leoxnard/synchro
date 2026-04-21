@@ -52,7 +52,7 @@ export default function HoldTheTime() {
         if (gameState === 'setup') return '36rem';
         if (gameState === 'running') return '32rem';
         if (gameState === 'results') {
-            return showAnalysis ? '49rem' : '32rem'; 
+            return showAnalysis ? 'calc(100% - 0rem)' : '32rem'; 
         }
         return '32rem';
     };
@@ -361,7 +361,7 @@ export default function HoldTheTime() {
     return (
         <div className="w-full h-full px-2 md:px-4 md:py-4 flex items-center justify-center">
             <div 
-                className={`relative overflow-hidden isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 ${!isMobileLayoutEnabled ? 'shadow-[0_20px_60px_rgba(0,0,0,0.4)]' : ''} backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
+                className={`relative isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 ${!isMobileLayoutEnabled ? 'shadow-[0_20px_60px_rgba(0,0,0,0.4)]' : ''} backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                 style={{
                     width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
                     height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
@@ -369,7 +369,7 @@ export default function HoldTheTime() {
                     maxHeight: '100dvh'
                 }}
             >
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] w-full h-full">
+                <div className="pointer-events-none absolute inset-0 rounded-[inherit] w-full h-full">
                     <div className="tempo-orb tempo-orb-a" />
                     <div className="tempo-orb tempo-orb-b" />
                     <div className="tempo-orb tempo-orb-c" />

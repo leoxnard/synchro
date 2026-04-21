@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SCORING_CONFIG } from './constants/gameConfig';
 import { formatMs, clamp } from './utils/mathHelpers';
 import { on } from 'events';
@@ -13,97 +13,171 @@ function StatCard({ label, value, highlight = false }) {
 }
 
 function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, expectedBeats = [], pairs = [], extraTaps = [], missedBeats = [] }) {
+    const outerRef = useRef(null);
+    const innerRef = useRef(null);
+    const zoomRef = useRef(1);
+    // NEU: Wir nutzen useRef statt useState für das Label, um React Re-Renders zu verhindern!
+    const zoomLabelRef = useRef(null); 
+
+    // Zoom-Logik
+    useEffect(() => {
+        const outer = outerRef.current;
+        const inner = innerRef.current;
+        if (!outer || !inner) return;
+
+        let initialDistance = null;
+        let startZoom = 1;
+
+        const updateZoom = (newZoom, pinchCenterX) => {
+            const oldZoom = zoomRef.current;
+            const rect = outer.getBoundingClientRect();
+            const xWithinVisible = pinchCenterX - rect.left;
+            const absolutePinchX = outer.scrollLeft + xWithinVisible;
+            const percentUnderPinch = absolutePinchX / (rect.width * oldZoom);
+
+            zoomRef.current = newZoom;
+            inner.style.width = `${newZoom * 100}%`;
+            outer.scrollLeft = (rect.width * newZoom) * percentUnderPinch - xWithinVisible;
+            
+            // NEU: Direktes DOM-Update für das Label (Kein Ruckeln mehr!)
+            if (zoomLabelRef.current) {
+                zoomLabelRef.current.textContent = `${newZoom.toFixed(1)}x`;
+                if (newZoom > 1.1) {
+                    zoomLabelRef.current.classList.remove('opacity-0');
+                    zoomLabelRef.current.classList.add('opacity-100');
+                } else {
+                    zoomLabelRef.current.classList.remove('opacity-100');
+                    zoomLabelRef.current.classList.add('opacity-0');
+                }
+            }
+        };
+
+        const onTouchMove = (e) => {
+            if (e.touches.length === 2 && initialDistance) {
+                e.preventDefault();
+                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                updateZoom(Math.min(Math.max(1, startZoom * (dist / initialDistance)), 30), (e.touches[0].clientX + e.touches[1].clientX) / 2);
+            }
+        };
+
+        const onTouchStart = (e) => { if (e.touches.length === 2) { initialDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); startZoom = zoomRef.current; } };
+        const onWheel = (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); updateZoom(Math.min(Math.max(1, zoomRef.current - e.deltaY * 0.02), 30), e.clientX); } };
+
+        outer.addEventListener('touchstart', onTouchStart, { passive: false });
+        outer.addEventListener('touchmove', onTouchMove, { passive: false });
+        outer.addEventListener('wheel', onWheel, { passive: false });
+        return () => { outer.removeEventListener('touchstart', onTouchStart); outer.removeEventListener('touchmove', onTouchMove); outer.removeEventListener('wheel', onWheel); };
+    }, []);
+
     const widthMs = Math.max(1, endMs - startMs);
-    const silenceLeftPct = ((silenceStartMs - startMs) / widthMs) * 100;
-    const silenceWidthPct = ((silenceEndMs - silenceStartMs) / widthMs) * 100;
 
     return (
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 md:p-4 mt-3">
-            <div className="mb-4 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.22em] text-neutral-500">
-                <span>Session Timeline</span>
+            <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-widest text-neutral-500">
+                <div className="flex items-center gap-4">
+                    <span>Timeline</span>
+                    <span 
+                        ref={zoomLabelRef} 
+                        className="text-cyan-400 font-mono transition-opacity duration-150 opacity-0"
+                    >
+                        1.0x
+                    </span>
+                </div>
                 <div className="flex gap-4">
-                    <span className="flex items-center gap-2 text-amber-500/80">
-                        <div className="w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-500/30"></div>
-                        Silence
-                    </span>
-                    <span className="flex items-center gap-2 text-fuchsia-400">
-                        <div className="w-3 h-3 rounded-sm bg-fuchsia-500/40 border border-fuchsia-500"></div>
-                        Downbeat
-                    </span>
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-amber-500/40 border border-amber-500/50" />Silence</span>
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-fuchsia-500 shadow-[0_0_5px_#d946ef]" />Downbeat</span>
                 </div>
             </div>
             
-            <div className="relative h-24 overflow-hidden rounded-xl border border-white/10 bg-neutral-950/50">
-                <div className="absolute inset-y-0 left-4 right-4">
-                    <div 
-                        className="absolute top-0 bottom-0 bg-amber-500/20 border-x border-amber-500/20"
-                        style={{ left: `${silenceLeftPct}%`, width: `${silenceWidthPct}%` }}
-                    />
+            <div 
+                ref={outerRef}
+                className="relative h-28 w-full overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-neutral-950/50 no-scrollbar"
+                style={{ 
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none', /* Firefox */
+                    msOverflowStyle: 'none'  /* IE/Edge */
+                }}
+            >
+                {/* CSS Inline-Hack für Chrome/Safari */}
+                <style dangerouslySetInnerHTML={{__html: `
+                    .no-scrollbar::-webkit-scrollbar { display: none; }
+                `}} />
+
+                <div 
+                    ref={innerRef} 
+                    className="relative h-full min-w-full" 
+                    style={{ width: `100%`, willChange: 'width' }}
+                >
+                    {/* Hintergrund (Stille) */}
+                    <div className="absolute inset-y-0 bg-amber-500/5 border-x border-amber-500/10"
+                         style={{ left: `${((silenceStartMs - startMs) / widthMs) * 100}%`, width: `${((silenceEndMs - silenceStartMs) / widthMs) * 100}%` }} />
                     
-                    {expectedBeats.map((beatTime) => {
-                        const leftPct = ((beatTime - startMs) / widthMs) * 100;
-                        const isReturnOne = Math.abs(beatTime - silenceEndMs) < 1; 
-                        
+                    {/* Beats */}
+                    {expectedBeats.map(bt => (
+                        <div key={bt} className={`absolute inset-y-0 ${Math.abs(bt - silenceEndMs) < 1 ? 'w-[2px] bg-fuchsia-500 z-10' : 'w-px bg-white/10'}`} 
+                             style={{ left: `${((bt - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }} />
+                    ))}
+                    
+                    {/* Taps */}
+                    {pairs.filter(p => !p.missed).map(pair => {
+                        const isReturn = Math.abs(pair.expectedTime - silenceEndMs) < 1;
+                        const diff = Math.round(pair.deltaMs);
                         return (
-                            <div 
-                                key={`beat-${beatTime}`} 
-                                className={`absolute top-0 bottom-0 ${isReturnOne ? 'w-[2px] bg-fuchsia-500 shadow-[0_0_8px_#d946ef] z-10' : 'w-px bg-white/20'}`} 
-                                style={{ left: `${leftPct}%` }} 
-                            />
+                            <div key={pair.expectedTime} 
+                                 className="group absolute top-4 bottom-4 w-8 flex justify-center items-center z-20 hover:z-50 cursor-crosshair"
+                                 style={{ left: `${((pair.correctedTime - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }}>
+                                <div className={`h-full rounded-full transition-all group-hover:scale-y-110 ${isReturn ? 'w-1 bg-fuchsia-300 shadow-[0_0_10px_#d946ef]' : 'w-[3px] ' + (diff < -15 ? 'bg-emerald-400' : diff > 15 ? 'bg-amber-400' : 'bg-cyan-400')}`} />
+                                
+                                {/* Tooltip Position angepasst: -top-5 statt -top-8 */}
+                                <div className="absolute top-1/3 opacity-0 group-hover:opacity-100 transition-all pointer-events-none scale-90 group-hover:scale-100 z-50">
+                                    <div className="bg-neutral-900 border border-white/20 text-white text-[10px] px-2 py-1 rounded-md shadow-2xl font-mono whitespace-nowrap">
+                                        {diff > 0 ? '+' : ''}{diff} ms
+                                    </div>
+                                </div>
+                            </div>
                         );
                     })}
-                    
-                    {pairs.filter(p => !p.missed).map((pair) => {
-                        const leftPct = ((pair.correctedTime - startMs) / widthMs) * 100;
-                        const isReturnOne = Math.abs(pair.expectedTime - silenceEndMs) < 1;
-                        
-                        let styleClass = 'absolute top-2 bottom-2 rounded-full shadow-[0_0_6px_currentColor] ';
-                        if (isReturnOne) {
-                            styleClass += 'w-[4px] bg-fuchsia-300 z-20 shadow-[0_0_12px_#d946ef]';
-                        } else {
-                            const tone = pair.deltaMs < -15 ? 'bg-emerald-400' : pair.deltaMs > 15 ? 'bg-amber-400' : 'bg-cyan-400';
-                            styleClass += `w-[3px] ${tone}`;
-                        }
 
-                        return (
-                            <div 
-                                key={`tap-${pair.expectedTime}`} 
-                                className={styleClass} 
-                                style={{ left: `${leftPct}%` }} 
-                                title={`${Math.round(pair.deltaMs)}ms`} 
-                            />
-                        );
-                    })}
-
+                    {/* Missed Beats */}
                     {missedBeats.map((time, idx) => {
                         const leftPct = ((time - startMs) / widthMs) * 100;
                         if (leftPct < 0 || leftPct > 100) return null;
                         return (
                             <div 
                                 key={`missed-${idx}`} 
-                                className="absolute top-0 bottom-0 w-[2px] bg-red-500 shadow-[0_0_8px_#ef4444]" 
-                                style={{ left: `${leftPct}%` }} 
-                            />
+                                className="group absolute inset-y-0 w-4 z-10 flex justify-center cursor-crosshair hover:z-50" 
+                                style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }} 
+                            >
+                                <div className="w-[2px] h-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+                                <div className="absolute top-1/2 left-full ml-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                    <div className="bg-red-900/90 text-red-100 text-[10px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap border border-red-500/30">
+                                        Missed
+                                    </div>
+                                </div>
+                            </div>
                         );
                     })}
 
+                    {/* Extra Taps */}
                     {extraTaps.map((tap, idx) => {
                         const leftPct = ((tap.correctedTime - startMs) / widthMs) * 100;
                         if (leftPct < 0 || leftPct > 100) return null; 
                         return (
                             <div 
                                 key={`extra-${idx}`} 
-                                className="absolute top-2 bottom-2 w-[3px] rounded-full bg-rose-400 shadow-[0_0_6px_#f43f5e] z-30" 
-                                style={{ left: `${leftPct}%` }} 
-                            />
+                                className="group absolute top-4 bottom-4 w-6 z-30 flex justify-center cursor-crosshair hover:z-50" 
+                                style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }} 
+                            >
+                                <div className="w-[3px] h-full rounded-full bg-rose-400 shadow-[0_0_6px_#f43f5e]" />
+                                <div className="absolute top-1/2 left-full ml-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                    <div className="bg-rose-900/90 text-rose-100 text-[10px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap border border-rose-500/30">
+                                        Extra
+                                    </div>
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
-            </div>
-            
-            <div className="mt-2 flex justify-between px-1 text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-                <span>Start</span>
-                <span>{Math.round(widthMs / 1000)}s</span>
             </div>
         </div>
     );
@@ -224,23 +298,32 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
                             <ScoreGraph 
-                                label="Accuracy Curve"
-                                currentError={analysis.rawMath.averageAbsOffsetMs}
+                                label="Accuracy Curve (General)"
+                                currentError={analysis.rawMath.effectiveOffsetMs}
                                 inflection={analysis.rawMath.accuracyInflectionMs}
                                 steepness={SCORING_CONFIG.accuracySteepness}
                                 accuracyLinearDropMs={SCORING_CONFIG.accuracyLinearDropMs}
                                 colorClass="text-emerald-400"
-                                score={analysis.rawMath.accuracyRaw}
+                                score={analysis.rawMath.generalAccuracyRaw}
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
-                                <div className="flex justify-between"><span>Error:</span> <span className="text-white">{Math.round(analysis.rawMath.averageAbsOffsetMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Leniency Multiplier:</span> <span className="text-white">{analysis.rawMath.leniencyMultiplier.toFixed(2)}x</span></div>
+                                <div className="flex justify-between mt-1"><span>Base Error (Raw):</span> <span className="text-white">{Math.round(analysis.rawMath.averageAbsOffsetMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Effective Error (Perfect Zone applied):</span> <span className="text-emerald-300">{Math.round(analysis.rawMath.effectiveOffsetMs)}ms</span></div>
+                                
+                                <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>Downbeat Error (Raw):</span> <span className="text-white">{Math.round(analysis.rawMath.downbeatOffsetMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Downbeat Effective Error:</span> <span className="text-emerald-300">{Math.round(analysis.rawMath.effectiveDownbeatOffsetMs)}ms</span></div>
+                                
+                                <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>General Accuracy (80%):</span> <span className="text-white">{analysis.rawMath.generalAccuracyRaw.toFixed(1)}%</span></div>
+                                <div className="flex justify-between"><span>Downbeat Accuracy (20%):</span> <span className="text-white">{analysis.rawMath.downbeatAccuracyRaw.toFixed(1)}%</span></div>
+                                <div className="flex justify-between font-bold"><span>Total Accuracy Raw:</span> <span className="text-emerald-300">{analysis.rawMath.accuracyRaw.toFixed(1)}%</span></div>
                             </div>
                         </div>
 
                         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
                             <ScoreGraph 
                                 label="Consistency Curve"
-                                currentError={analysis.rawMath.stdDeviationMs}
+                                currentError={analysis.rawMath.effectiveStdDevMs}
                                 inflection={analysis.rawMath.consistencyInflectionMs}
                                 steepness={SCORING_CONFIG.consistencySteepness}
                                 accuracyLinearDropMs={SCORING_CONFIG.accuracyLinearDropMs}
@@ -248,8 +331,11 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                                 score={analysis.rawMath.consistencyRawBeforePenalty}
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
-                                <div className="flex justify-between"><span>Variance:</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Penalty:</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault) / 10}</span></div>
+                                <div className="flex justify-between"><span>Base Variance (StdDev):</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Effective Variance (Zone applied):</span> <span className="text-amber-300">{Math.round(analysis.rawMath.effectiveStdDevMs)}ms</span></div>
+                                <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>Consistency Base Score:</span> <span className="text-white">{analysis.rawMath.consistencyRawBeforePenalty.toFixed(1)}%</span></div>
+                                <div className="flex justify-between"><span>Faults (Miss/Extra):</span> <span className="text-rose-400">{analysis.rawMath.totalFaults}</span></div>
+                                <div className="flex justify-between"><span>Penalty ({analysis.rawMath.penaltyPerFault.toFixed(1)}% per fault):</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault * 10) / 10}%</span></div>
                             </div>
                         </div>
                     </div>
@@ -257,7 +343,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
             )}
 
             <div className="mt-auto pt-4 flex flex-wrap justify-center gap-2 pb-2">
-                {!isMobile && isDebugMode && (
+                {isDebugMode && (
                     <button 
                         type="button" 
                         onClick={() => onToggleAnalysis()} 
