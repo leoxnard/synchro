@@ -55,26 +55,65 @@ export const buildAutoLatencySamples = ({ expectedTaps, actualTaps }) => {
     return samples;
 };
 
-export const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDuration }) => {
+const calculateWeightedMedian = (items) => {
+    if (items.length === 0) return 0;
+
+    const sorted = [...items].sort((a, b) => a.diff - b.diff);
+    const totalWeight = sorted.reduce((sum, item) => sum + item.weight, 0);
+    
+    let cumulativeWeight = 0;
+    for (const item of sorted) {
+        cumulativeWeight += item.weight;
+        if (cumulativeWeight >= totalWeight / 2) {
+            return item.diff;
+        }
+    }
+    return sorted[sorted.length - 1].diff;
+};
+
+export const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measureDuration, beatsPerMeasure = 4 }) => {
     const MIN_MATCHED_SAMPLES = 8;
     const MIN_ABS_MEDIAN_MS = 8;
     const DIRECTION_DEADZONE_MS = 10;
     const BUCKET_DEADZONE_MS = 8;
+    
     if (matchedResults.length < MIN_MATCHED_SAMPLES) return 0;
 
-    const diffs = matchedResults.map((result) => result.diff);
-    const overallMedian = median(diffs);
+    const weightedResults = matchedResults.map((result) => {
+        const track = tracks.find((candidate) => candidate.id === result.trackId);
+        const pulses = track ? track.pulses : 1;
+        
+        let weight = 1;
+        
+        if (pulses === beatsPerMeasure) {
+            weight = 4;
+        } else if (pulses % beatsPerMeasure === 0) {
+            weight = 3;
+        } else if (pulses === beatsPerMeasure / 2) {
+            weight = 2;
+        } else if (pulses === 1) {
+            weight = 1.5;
+        }
+
+        return { ...result, weight };
+    });
+
+    const overallMedian = calculateWeightedMedian(weightedResults);
     const overallDirection = signOf(overallMedian, DIRECTION_DEADZONE_MS);
 
     if (overallDirection === 0 || Math.abs(overallMedian) < MIN_ABS_MEDIAN_MS) return 0;
 
-    const directionalHits = diffs.filter((diff) => signOf(diff, DIRECTION_DEADZONE_MS) === overallDirection).length;
-    const directionalRatio = directionalHits / diffs.length;
+    const totalWeight = weightedResults.reduce((sum, r) => sum + r.weight, 0);
+    const directionalWeight = weightedResults
+        .filter((r) => signOf(r.diff, DIRECTION_DEADZONE_MS) === overallDirection)
+        .reduce((sum, r) => sum + r.weight, 0);
+
+    const directionalRatio = directionalWeight / totalWeight;
     if (directionalRatio < 0.68) return 0;
 
     const groupedBySubdivision = new Map();
 
-    matchedResults.forEach((result) => {
+    weightedResults.forEach((result) => {
         const track = tracks.find((candidate) => candidate.id === result.trackId);
         if (!track || track.pulses <= 0) return;
 
@@ -85,22 +124,25 @@ export const estimateAutoLatencyCorrectionMs = ({ matchedResults, tracks, measur
         if (!groupedBySubdivision.has(bucketKey)) {
             groupedBySubdivision.set(bucketKey, []);
         }
-        groupedBySubdivision.get(bucketKey).push(result.diff);
+        groupedBySubdivision.get(bucketKey).push(result);
     });
 
     let sameDirectionWeight = 0;
     let oppositeDirectionWeight = 0;
 
-    groupedBySubdivision.forEach((bucketDiffs) => {
-        if (bucketDiffs.length < 2) return;
-        const bucketMedian = median(bucketDiffs);
+    groupedBySubdivision.forEach((bucketItems) => {
+        if (bucketItems.length < 2) return;
+        
+        const bucketMedian = calculateWeightedMedian(bucketItems);
         const bucketDirection = signOf(bucketMedian, BUCKET_DEADZONE_MS);
         if (bucketDirection === 0) return;
 
+        const bucketTotalWeight = bucketItems.reduce((sum, item) => sum + item.weight, 0);
+
         if (bucketDirection === overallDirection) {
-            sameDirectionWeight += bucketDiffs.length;
+            sameDirectionWeight += bucketTotalWeight;
         } else {
-            oppositeDirectionWeight += bucketDiffs.length;
+            oppositeDirectionWeight += bucketTotalWeight;
         }
     });
 

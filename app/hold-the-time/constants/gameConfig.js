@@ -23,10 +23,10 @@ export const SCORING_CONFIG = {
     baseSilenceBeats: 4,     // Bis zu dieser Anzahl an Schlägen gibt es keine Extrapunkte/Kulanz
     leniencyFactor: 0.005,   // Wie stark die Kulanz danach quadratisch ansteigt (kleine Werte nutzen!)
 
-    perfectAccuracyThresholdMs: 10,   // Bis zu 10ms durchschnittliche Abweichung bleiben 100% (Score 10)
-    perfectConsistencyThresholdMs: 5, // Bis zu 5ms Standardabweichung bleiben 100% (Score 10)
+    perfectAccuracyThresholdMs: 15,   // Bis zu 15ms durchschnittliche Abweichung bleiben 100% (Score 10)
+    perfectConsistencyThresholdMs: 6, // Bis zu 6ms Standardabweichung bleiben 100% (Score 10)
 
-    downbeatAccuracyWeight: 0.2,
+    downbeatAccuracyWeight: 0.3,
 };
 
 export const BEATS = [

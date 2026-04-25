@@ -571,7 +571,8 @@ export const computeFinalScore = ({
     const hintCorrectionMs = estimateAutoLatencyCorrectionMs({
         matchedResults,
         tracks,
-        measureDuration
+        measureDuration,
+        beatsPerMeasure
     });
     if (Number.isFinite(hintCorrectionMs)) {
         candidateCorrections.add(clamp(hintCorrectionMs, MIN_ALLOWED_NEGATIVE_LATENCY_MS, MAX_AUTO_CORRECTION_MS));

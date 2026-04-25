@@ -7,6 +7,8 @@ export function useAudioEngine() {
     const initAudioContext = async () => {
         if (!audioCtxRef.current) {
             audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            const unmute = (await import('iosunmute')).default;
+            unmute(audioCtxRef.current);
         }
         if (audioCtxRef.current.state !== 'running') {
             await audioCtxRef.current.resume().catch(() => {});

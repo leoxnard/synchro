@@ -1,36 +1,33 @@
 import { useState, useEffect } from 'react';
 
-export const useIsMobile = (breakpoint = 768) => {
-    // Initialer State ist null oder ein Standardwert, um Hydration-Fehler zu vermeiden
-    const [isMobile, setIsMobile] = useState(false);
+export const useIsMobile = () => {
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
 
     useEffect(() => {
-        // 1. Media Query für die Breite (Layout-Check)
-        const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-        
-        // 2. Check für Touch-Eingabe (Hardware-Check)
-        const isTouch = () => {
+        // Funktion zur reinen Touch-Erkennung
+        const checkTouch = () => {
             return (
                 'ontouchstart' in window ||
                 navigator.maxTouchPoints > 0 ||
+                // Die zuverlässigste Methode für moderne Browser:
                 window.matchMedia('(pointer: coarse)').matches
             );
         };
 
-        const updateDevice = () => {
-            // Logik: Ein Gerät ist "mobil", wenn der Bildschirm schmal ist 
-            // ODER es ein kleineres Tablet mit Touch-Fokus ist.
-            setIsMobile(mql.matches || (isTouch() && window.innerWidth <= 1024));
+        // Initialer Check
+        setIsTouchDevice(checkTouch());
+
+        // Optional: Listener für Änderungen (falls man z.B. im DevTools-Modus umschaltet)
+        const mql = window.matchMedia('(pointer: coarse)');
+        
+        const handleChange = () => {
+            setIsTouchDevice(checkTouch());
         };
 
-        // Initialer Check
-        updateDevice();
-
-        // Listener für Änderungen (Resize/Rotation)
-        mql.addEventListener('change', updateDevice);
+        mql.addEventListener('change', handleChange);
         
-        return () => mql.removeEventListener('change', updateDevice);
-    }, [breakpoint]);
+        return () => mql.removeEventListener('change', handleChange);
+    }, []);
 
-    return isMobile;
+    return isTouchDevice;
 };

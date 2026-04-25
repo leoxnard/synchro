@@ -99,7 +99,9 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
     const silencePairs = expectedSilenceBeats.filter(p => !p.missed);
     const silenceIntervals = intervals.filter(i => i.phase === 'silence');
     
-    const missedSilenceBeats = expectedSilenceBeats.length - silencePairs.length;
+    const missedSilenceBeats = silencePairs.length > 0 
+        ? expectedSilenceBeats.filter(p => p.missed && p.expectedTime < silencePairs[silencePairs.length - 1].expectedTime).length 
+        : expectedSilenceBeats.length;
     const extraSilenceTaps = extraTaps.filter(t => 
         t.correctedTime >= silenceStartGridMs && t.correctedTime < silenceStartGridMs + silentMs
     ).length;
@@ -162,7 +164,7 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
 
     // --- CONSISTENCY BERECHNUNG ---
     let consistencyRawBeforePenalty = 0;
-    const consistencyInflectionMs = (beatMs * SCORING_CONFIG.consistencyInflectionPct) * leniencyMultiplier;
+    const consistencyInflectionMs = (beatMs * SCORING_CONFIG.consistencyInflectionPct);
     let effectiveStdDevMs = stdDeviationMs;
     
     if (silenceIntervals.length > 0) {
@@ -184,9 +186,9 @@ export const analyzeSession = ({ taps, beatMs, actualActiveMs, silentBars, retur
     
     const finalScore = ((consistencyScore * SCORING_CONFIG.weightConsistency) + (accuracyScore * SCORING_CONFIG.weightAccuracy)).toFixed(1);
 
-    const missedBeats = pairs
-        .filter(p => p.missed && p.phase === 'silence')
-        .map(p => p.expectedTime);
+    const missedBeats = silencePairs.length > 0
+        ? pairs.filter(p => p.missed && p.phase === 'silence' && p.expectedTime < silencePairs[silencePairs.length - 1].expectedTime).map(p => p.expectedTime)
+        : pairs.filter(p => p.missed && p.phase === 'silence').map(p => p.expectedTime);
 
     return {
         calibrationMs, beatMs, 
