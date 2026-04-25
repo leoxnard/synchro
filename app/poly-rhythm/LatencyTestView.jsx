@@ -88,10 +88,15 @@ export default function LatencyTestView({ onClose }) {
         setActiveKeys({});
     }, []);
 
-    useEffect(() => {
+    useEffect(async () => {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const ctx = new AudioContext();
+        const unmute = (await import('iosunmute')).default;
+        unmute(ctx);
         audioCtxRef.current = ctx;
+        if (ctx.state !== 'running') {
+            ctx.resume().catch(() => {});
+        }
 
         const leadIn = 0.2;
         nextBeatTimeRef.current = ctx.currentTime + leadIn;
@@ -349,7 +354,7 @@ export default function LatencyTestView({ onClose }) {
 
                 <div className="rounded-xl border border-white/10 bg-neutral-900/55 p-3">
                     <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Lag Per Key</div>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
                         {perKeyStats.length === 0 && (
                             <div className="text-sm text-neutral-500">No measurements yet.</div>
                         )}
@@ -367,7 +372,7 @@ export default function LatencyTestView({ onClose }) {
 
             <div className="rounded-xl border border-white/10 bg-neutral-900/55 p-3 text-left flex flex-col flex-1 basis-0 min-h-0 overflow-hidden">
                 <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Recent Inputs</div>
-                <div className="space-y-1 flex-1 min-h-0 overflow-hidden pr-1">
+                <div className="space-y-1 flex-1 min-h-0 overflow-hidden">
                     {recentEvents.length === 0 && (
                         <div className="text-sm text-neutral-500">No inputs captured.</div>
                     )}

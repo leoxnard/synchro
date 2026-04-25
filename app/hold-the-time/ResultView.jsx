@@ -250,8 +250,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
     if (!analysis) return null;
 
     return (
-        <div className="w-full max-w-4xl mx-auto h-full overflow-y-auto pr-1 md:pr-2 flex flex-col">
-            
+        <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col">            
             <div className="mb-4 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
                 {!isMobile && (
                     <div>
@@ -314,8 +313,8 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                                 <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>Downbeat Error (Raw):</span> <span className="text-white">{Math.round(analysis.rawMath.downbeatOffsetMs)}ms</span></div>
                                 <div className="flex justify-between"><span>Downbeat Effective Error:</span> <span className="text-emerald-300">{Math.round(analysis.rawMath.effectiveDownbeatOffsetMs)}ms</span></div>
                                 
-                                <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>General Accuracy (80%):</span> <span className="text-white">{analysis.rawMath.generalAccuracyRaw.toFixed(1)}%</span></div>
-                                <div className="flex justify-between"><span>Downbeat Accuracy (20%):</span> <span className="text-white">{analysis.rawMath.downbeatAccuracyRaw.toFixed(1)}%</span></div>
+                                <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>General Accuracy ({(1 - SCORING_CONFIG.downbeatAccuracyWeight) * 100}%):</span> <span className="text-white">{analysis.rawMath.generalAccuracyRaw.toFixed(1)}%</span></div>
+                                <div className="flex justify-between"><span>Downbeat Accuracy ({SCORING_CONFIG.downbeatAccuracyWeight * 100}%):</span> <span className="text-white">{analysis.rawMath.downbeatAccuracyRaw.toFixed(1)}%</span></div>
                                 <div className="flex justify-between font-bold"><span>Total Accuracy Raw:</span> <span className="text-emerald-300">{analysis.rawMath.accuracyRaw.toFixed(1)}%</span></div>
                             </div>
                         </div>
@@ -342,7 +341,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 </div>
             )}
 
-            <div className="mt-auto pt-4 flex flex-wrap justify-center gap-2 pb-2">
+            <div className="mt-auto pt-4 flex flex-wrap justify-center gap-2 pb-4">
                 {isDebugMode && (
                     <button 
                         type="button" 

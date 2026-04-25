@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
@@ -15,16 +16,23 @@ export default function RootLayout({
 }) {
     return (
         <html lang="de">
-            <body className="bg-neutral-900 text-white">
-                <div className="flex flex-col h-[100dvh] overflow-hidden">
+            <body className="bg-neutral-900 text-white h-[100dvh] flex flex-col overflow-hidden relative">
+                
+                {/* Navbar */}
+                <div className="z-50 flex-none">
                     <Navbar />
+                </div>
 
-                    <main className="flex-1 overflow-hidden">
-                        {children}
-                    </main>
-
+                {/* Main Content - Jetzt mit h-full, damit es nicht mehr wachsen kann! */}
+                <main className="flex-1 relative z-10 flex flex-col w-full h-full min-h-0 items-center justify-center">
+                    {children}
+                </main>
+                
+                {/* Footer */}
+                <div className="w-full z-50 flex-none pb-4">
                     <Footer />
                 </div>
+                
             </body>
         </html>
     );

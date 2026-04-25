@@ -75,7 +75,7 @@ export default function CalibrationView({ onComplete, onCancel }) {
         onCancel();
     }, [onCancel, stopCalibrationAudio]);
 
-    const startCalibration = useCallback(() => {
+    const startCalibration = useCallback(async () => {
         stopCalibrationAudio();
         deltasRef.current = [];
         expectedTimesRef.current = [];
@@ -85,6 +85,11 @@ export default function CalibrationView({ onComplete, onCancel }) {
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtxRef.current = new AudioContext();
+        const unmute = (await import('iosunmute')).default;
+        unmute(audioCtxRef.current);
+        if (audioCtxRef.current.state !== 'running') {
+            audioCtxRef.current.resume().catch(() => {});
+        }
 
         const now = audioCtxRef.current.currentTime;
         const leadIn = 1.0;

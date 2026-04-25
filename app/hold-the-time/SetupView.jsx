@@ -28,53 +28,66 @@ function BeatCard({ beat, selected, onSelect, isPreviewing, onPreviewStart }) {
 
 function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
-        <div className="flex h-full flex-col overflow-y-auto pr-1">
-            <span className="text-3xl font-light text-neutral-400 mb-3 text-center tracking-widest border-b border-white/10 pb-2">Hold The Tempo</span>
-            <div className="grid gap-3 pb-3 md:grid-cols-2 border-b border-white/10">
-                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} />
-                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} />
+        <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
+            <div className="flex flex-1 flex-col justify-center w-full pb-8">
+                <div className="text-center border-b border-white/10 pb-4 mb-6">
+                    <span className="text-3xl font-light text-neutral-400 tracking-widest">Hold The Tempo</span>
+                </div>
+                
+                <div className="grid gap-4 pb-6 md:grid-cols-1 border-b border-white/10">
+                    {/* <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} /> */}
+                    <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} />
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 py-4">
+                    {BEATS.map((beat) => (
+                        <BeatCard 
+                            key={beat.id} 
+                            beat={beat} 
+                            selected={beat.id === selectedBeatId} 
+                            onSelect={setSelectedBeatId}
+                            isPreviewing={previewingBeatId === beat.id}
+                            onPreviewStart={onPreviewStart}
+                        />
+                    ))}
+                </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-2 py-3">
-                {BEATS.map((beat) => (
-                    <BeatCard 
-                        key={beat.id} 
-                        beat={beat} 
-                        selected={beat.id === selectedBeatId} 
-                        onSelect={setSelectedBeatId}
-                        isPreviewing={previewingBeatId === beat.id}
-                        onPreviewStart={onPreviewStart}
-                    />
-                ))}
+            
+            <div className="flex flex-col items-center mt-auto pt-4">
+                <button type="button" onClick={onStart} className="rounded-full bg-stone-200 px-8 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 transition-transform active:scale-95">Start</button>
             </div>
-            <div className="mt-auto flex flex-col items-center">
-                <button type="button" onClick={onStart} className="rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 transition-transform active:scale-95">Start</button>
-            </div>
+            
         </div>
     );
 }
 
 function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
-        <div className="flex h-full flex-col gap-4 overflow-y-auto">
-            <div className="grid gap-2 grid-cols-2">
-                <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact={true} />
-                <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact={true} />
+        <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
+            
+            <div className="flex flex-col gap-2 pb-2 w-full">
+                <div className="grid gap-3 grid-cols-1 border-b border-white/10 pb-2">
+                    {/* <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} compact={true} /> */}
+                    <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} compact={true} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    {BEATS.map((beat) => (
+                        <BeatCard 
+                            key={beat.id} 
+                            beat={beat} 
+                            selected={beat.id === selectedBeatId} 
+                            onSelect={setSelectedBeatId}
+                            isPreviewing={previewingBeatId === beat.id}
+                            onPreviewStart={onPreviewStart}
+                        />
+                    ))}
+                </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-                {BEATS.map((beat) => (
-                    <BeatCard 
-                        key={beat.id} 
-                        beat={beat} 
-                        selected={beat.id === selectedBeatId} 
-                        onSelect={setSelectedBeatId}
-                        isPreviewing={previewingBeatId === beat.id}
-                        onPreviewStart={onPreviewStart}
-                    />
-                ))}
+
+            <div className="flex flex-col items-center mt-auto pt-4">
+                <button type="button" onClick={onStart} className="rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 active:scale-95">Start</button>
             </div>
-            <div className="mt-auto flex flex-col items-center">
-                <button type="button" onClick={onStart} className="w-full rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 active:scale-95">Start</button>
-            </div>
+            
         </div>
     );
 }

@@ -10,20 +10,26 @@ export default function AdjustmentView({ startTempo, onSubmit, minTempo, maxTemp
     const tempoRef = useRef(startTempo);
 
     useEffect(() => {
-        if (audioCtx) {
-            audioCtxRef.current = audioCtx;
-            ownsAudioCtxRef.current = false;
-        } else if (typeof window !== 'undefined') {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!audioCtxRef.current) {
-                audioCtxRef.current = new AudioContext();
-                ownsAudioCtxRef.current = true;
+        const initAudio = async () => {
+            if (audioCtx) {
+                audioCtxRef.current = audioCtx;
+                ownsAudioCtxRef.current = false;
+            } else if (typeof window !== 'undefined') {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!audioCtxRef.current) {
+                    audioCtxRef.current = new AudioContext();
+                    const unmute = (await import('iosunmute')).default;
+                    unmute(audioCtxRef.current);
+                    ownsAudioCtxRef.current = true;
+                }
             }
-        }
 
-        if (audioCtxRef.current && audioCtxRef.current.state !== 'running') {
-            audioCtxRef.current.resume().catch(() => {});
-        }
+            if (audioCtxRef.current && audioCtxRef.current.state !== 'running') {
+                audioCtxRef.current.resume().catch(() => {});
+            }
+        };
+
+        initAudio();
 
         return () => {
             if (schedulerRef.current) clearTimeout(schedulerRef.current);
@@ -100,9 +106,8 @@ export default function AdjustmentView({ startTempo, onSubmit, minTempo, maxTemp
     };
 
     return (
-        <div className="h-full w-full flex flex-col items-center justify-center">
-            <div className="relative w-full h-full max-w-lg text-center flex flex-col justify-center px-4 gap-5">
-
+        <div className="flex-1 w-full flex flex-col">
+            <div className="relative w-full flex-1 max-w-lg mx-auto text-center flex flex-col justify-center px-4 gap-6">   
                 <div className="flex flex-col items-center justify-center mb-2">
                     <div className="flex items-center justify-center gap-4 md:gap-6">
                         <button 

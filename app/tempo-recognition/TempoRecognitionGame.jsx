@@ -6,6 +6,7 @@ import ListeningView from './ListeningView';
 import AdjustmentView from './AdjustmentView';
 import RoundResultsView from './RoundResultsView';
 import FinalResultsView from './FinalResultsView';
+import GameContainer from '../components/GameContainer';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { getHighscore, saveHighscore } from '../lib/highscoreStorage';
 
@@ -30,7 +31,6 @@ export default function TempoRecognitionGame() {
     const currentSessionTotal = scores.length === TOTAL_ROUNDS ? scores.reduce((sum, score) => sum + score, 0) : 0;
     const isNewHighscoreFlag = gameState === 'final-results' && currentSessionTotal > highscore;
 
-
     const generateTargetTempo = (previousTempo) => {
         let newTarget = Math.floor(Math.random() * (MAX_TEMPO - MIN_TEMPO + 1)) + MIN_TEMPO;
         
@@ -51,7 +51,7 @@ export default function TempoRecognitionGame() {
         return Math.max(MIN_TEMPO, Math.min(MAX_TEMPO, starting));
     };
 
-    const startRound = () => {
+    const startRound = async () => {
         const newTarget = generateTargetTempo(targetTempo);
         setTargetTempo(newTarget);
         setCurrentTempo(generateStartingTempo(newTarget));
@@ -62,6 +62,8 @@ export default function TempoRecognitionGame() {
             if (!audioCtx) {
                 const ctx = new AudioContext();
                 setAudioCtx(ctx);
+                const unmute = (await import('iosunmute')).default;
+                unmute(ctx);
                 if (ctx.state !== 'running') {
                     ctx.resume().catch(() => {});
                 }
@@ -118,17 +120,9 @@ export default function TempoRecognitionGame() {
     if (!isClient) return <div className="loading-placeholder" />;
 
     return (
-        <div className="w-full h-full px-2 md:px-4 md:py-4 flex items-center justify-center">
-            <div className={`tempo-window isolate relative mx-auto ${isMobileLayoutEnabled ? 'h-full' : 'h-[34rem] shadow-[0_20px_60px_rgba(0,0,0,0.4)]'} w-full max-w-md overflow-hidden rounded-[1.7rem] border border-white/10 bg-black/90 dark:bg-neutral-900/80 backdrop-blur`}>
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-                    <div className="tempo-orb tempo-orb-a" />
-                    <div className="tempo-orb tempo-orb-b" />
-                    <div className="tempo-orb tempo-orb-c" />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
-                </div>
-
-
-                <div className="relative z-10 h-full p-5 md:p-7 rounded-[1.7rem] items-center justify-center flex flex-col">
+        <div className="flex flex-col w-full flex-1 px-2 md:px-4 md:py-4 min-h-0 justify-center items-center">
+            <GameContainer desktopWidth="30rem" desktopHeight="40rem">
+                <div className="relative z-10 w-full flex-1 p-5 md:p-7 flex flex-col">
                     {(gameState === 'listening' || gameState === 'adjusting') && (
                         <div 
                             className="mb-3 h-5 flex items-center justify-center relative w-full"
@@ -150,7 +144,7 @@ export default function TempoRecognitionGame() {
                         </div>
                     )}
                     {gameState === 'intro' && (
-                        <div className="h-full w-full flex flex-col items-center justify-center text-center gap-4">
+                        <div className="w-full flex flex-1 flex-col items-center justify-center text-center gap-4">
                             {!isMobileLayoutEnabled && (
                                 <h2 className="mb-5 text-4xl font-light tracking-widest text-white md:text-5xl">Tempo Recognition</h2>
                             )}
@@ -201,79 +195,8 @@ export default function TempoRecognitionGame() {
                         />
                     )}
                 </div>
-            </div>
-
-            <style jsx>{`
-                .tempo-orb {
-                    position: absolute;
-                    border-radius: 9999px;
-                    filter: blur(62px) saturate(1.2);
-                    mix-blend-mode: screen;
-                    pointer-events: none;
-                    opacity: 0;
-                }
-
-                .tempo-orb-a {
-                    width: 16rem;
-                    height: 16rem;
-                    left: -3rem;
-                    top: -4rem;
-                    background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
-                    animation: orbFloatA 9s ease-in-out infinite;
-                }
-
-                .tempo-orb-b {
-                    width: 18rem;
-                    height: 18rem;
-                    right: -4rem;
-                    bottom: -5rem;
-                    background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
-                    animation: orbFloatB 11s ease-in-out infinite;
-                }
-
-                .tempo-orb-c {
-                    width: 13rem;
-                    height: 13rem;
-                    right: 28%;
-                    top: 32%;
-                    background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
-                    animation: orbFloatC 8s ease-in-out infinite;
-                }
-
-                @keyframes orbFloatA {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
-                    35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
-                    70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
-                }
-
-                @keyframes orbFloatB {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
-                    40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
-                    75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
-                }
-
-                @keyframes orbFloatC {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
-                    50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
-                }
-
-                @keyframes phaseChange {
-                    0% { 
-                        opacity: 0; 
-                        transform: translateY(8px); 
-                        filter: blur(4px);
-                    }
-                    100% { 
-                        opacity: 1; 
-                        transform: translateY(0); 
-                        filter: blur(0);
-                    }
-                }
-
-                .animate-phase-change {
-                    animation: phaseChange 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-            `}</style>
+            </GameContainer>
+            
         </div>
     );
 }

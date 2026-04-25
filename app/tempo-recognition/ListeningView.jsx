@@ -135,42 +135,44 @@ export default function ListeningView({ targetTempo, audioCtx, onListeningComple
         };
     }, [targetTempo, audioCtx, onListeningComplete]);
 
-    return (
-        <div className="h-full w-full flex flex-col items-center justify-center">
-            <div className="relative w-full max-w-lg h-full text-center flex flex-col items-center justify-between py-6">
-                <div 
-                    className="relative mx-auto mt-auto mb-6 h-48 w-48"
-                    style={{ perspective: '800px' }}
-                >
-                    {pulses.map((pulseId) => (
-                        <motion.div 
-                            key={pulseId} 
-                            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                            initial={{ scale: 0.5, z: -5, opacity: 1 }}
-                            animate={{ scale: 2, z: 80, opacity: [1, 0.8, 0] }}
-                            transition={{ 
-                                duration: 2, 
-                                ease: "easeOut",
-                                times: [0, 0.7, 1] 
-                            }}
-                        >
-                            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                                <DynamicAudioWave baseRadius={40} color="rgba(16, 185, 129, 0.7)" volatility={4} speed={1.2} strokeWidth="0.2" />
-                                <DynamicAudioWave baseRadius={39} color="rgba(255, 255, 255, 0.5)" volatility={5.5} speed={1.8} strokeWidth="0.15" />
-                                <DynamicAudioWave baseRadius={38} color="rgba(255, 255, 255, 0.3)" volatility={7} speed={2.5} strokeWidth="0.1" />
-                            </svg>
-                        </motion.div>
-                    ))}
-                    
-                    <motion.div
-                        key={centerPulseKey}
-                        initial={{ scale: 1, z: 0 }}
-                        animate={{ scale: [1, 1.02, 1], z: [0, 30, 0] }}
-                        transition={{ duration: 0.26, ease: "easeOut" }}
-                        className="absolute inset-14 rounded-full border-2 border-stone-300 bg-neutral-900/50 shadow-[0_0_28px_rgba(168,162,158,0.35)] backdrop-blur-sm z-10"
-                    />
+return (
+        <div className="flex-1 w-full flex flex-col">
+            <div className="relative w-full flex-1 max-w-lg mx-auto text-center flex flex-col items-center px-4 pb-4 md:pb-6 min-h-0">
+                <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0">
+                    <div 
+                        className="relative mx-auto h-48 w-48 shrink-0"
+                        style={{ perspective: '800px' }}
+                    >
+                        {pulses.map((pulseId) => (
+                            <motion.div 
+                                key={pulseId} 
+                                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                                initial={{ scale: 0.5, z: -5, opacity: 1 }}
+                                animate={{ scale: 2, z: 80, opacity: [1, 0.8, 0] }}
+                                transition={{ 
+                                    duration: 2, 
+                                    ease: "easeOut",
+                                    times: [0, 0.7, 1] 
+                                }}
+                            >
+                                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
+                                    <DynamicAudioWave baseRadius={40} color="rgba(16, 185, 129, 0.7)" volatility={4} speed={1.2} strokeWidth="0.2" />
+                                    <DynamicAudioWave baseRadius={39} color="rgba(255, 255, 255, 0.5)" volatility={5.5} speed={1.8} strokeWidth="0.15" />
+                                    <DynamicAudioWave baseRadius={38} color="rgba(255, 255, 255, 0.3)" volatility={7} speed={2.5} strokeWidth="0.1" />
+                                </svg>
+                            </motion.div>
+                        ))}
+                        
+                        <motion.div
+                            key={centerPulseKey}
+                            initial={{ scale: 1, z: 0 }}
+                            animate={{ scale: [1, 1.02, 1], z: [0, 30, 0] }}
+                            transition={{ duration: 0.26, ease: "easeOut" }}
+                            className="absolute inset-14 rounded-full border-2 border-stone-300 bg-neutral-900/50 shadow-[0_0_28px_rgba(168,162,158,0.35)] backdrop-blur-sm z-10"
+                        />
+                    </div>
                 </div>
-                <div className="w-full mt-auto pb-2">
+                <div className="w-full shrink-0 pt-4">
                     <p className="mb-4 text-xl font-semibold text-white">Lock in the beat</p>
                     <div className="relative mx-auto h-1.5 w-64 overflow-hidden rounded-full bg-white/10">
                         <div
@@ -179,6 +181,7 @@ export default function ListeningView({ targetTempo, audioCtx, onListeningComple
                         />
                     </div>
                 </div>
+
             </div>
         </div>
     );

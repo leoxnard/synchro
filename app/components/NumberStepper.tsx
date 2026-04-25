@@ -3,7 +3,7 @@
 import { useId, type ChangeEvent } from 'react';
 import { SlArrowLeft, SlArrowRight } from 'react-icons/sl';
 
-type NumberStepperProps = {
+type NumberStepperNoInputProps = {
     label?: string;
     value: number;
     onChange: (value: number) => void;
@@ -14,7 +14,7 @@ type NumberStepperProps = {
     className?: string;
 };
 
-export default function NumberStepper({
+export function NumberStepperNoInput({
     label,
     value,
     onChange,
@@ -23,7 +23,74 @@ export default function NumberStepper({
     step = 1,
     compact = false,
     className = ''
-}: NumberStepperProps) {
+}: NumberStepperNoInputProps) {
+
+    const clampValue = (numericValue: number) => {
+        return Math.min(max, Math.max(min, numericValue));
+    };
+
+    const handleStep = (direction: number) => {
+        const nextValue = Number(value) + (direction * step);
+        onChange(clampValue(nextValue));
+    };
+
+    return (
+        <div className={`flex flex-col gap-1 relative group text-stone-100 items-center ${className}`}>
+            {label && (
+                <span className="flex items-end text-[0.625rem] text-neutral-400 uppercase tracking-widest leading-4 text-left">
+                    {label}
+                </span>
+            )}
+            <div className="relative flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={() => handleStep(-1)}
+                    aria-label={label ? `${label} decrease` : 'Decrease value'}
+                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer"
+                >
+                    <SlArrowLeft size={16} />
+                </button>
+
+                <div
+                    className={`w-16 bg-neutral-900 rounded-lg border border-neutral-700 flex items-center justify-center font-bold text-center text-stone-100 select-none ${compact ? 'h-9 px-2 text-base' : 'h-10 px-3 text-lg'}`}
+                >
+                    {value}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => handleStep(1)}
+                    aria-label={label ? `${label} increase` : 'Increase value'}
+                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer"
+                >
+                    <SlArrowRight size={16} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+type NumberStepperInputProps = {
+    label?: string;
+    value: number;
+    onChange: (value: number) => void;
+    min: number;
+    max: number;
+    step?: number;
+    compact?: boolean;
+    className?: string;
+};
+
+export function NumberStepperInput({
+    label,
+    value,
+    onChange,
+    min,
+    max,
+    step = 1,
+    compact = false,
+    className = ''
+}: NumberStepperInputProps) {
     const inputId = useId();
 
     const clampValue = (rawValue: number | string) => {
@@ -40,7 +107,7 @@ export default function NumberStepper({
     };
 
     return (
-        <div className={`flex flex-col gap-1 relative group text-stone-100 ${className}`}>
+        <div className={`flex flex-col gap-1 relative group text-stone-100 items-center ${className}`}>
             {label && (
                 <label
                     htmlFor={inputId}
@@ -87,4 +154,8 @@ export default function NumberStepper({
             </div>
         </div>
     );
+}
+
+export default function NumberStepper(props: NumberStepperInputProps & { allowInputEdit?: boolean }) {
+    return props.allowInputEdit ? <NumberStepperInput {...props} /> : <NumberStepperNoInput {...props} />;
 }

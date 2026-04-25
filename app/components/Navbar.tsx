@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useIsMobile } from "../hooks/useIsMobile";
-import { useEffect, useState } from "react";
 
 const GAMES = [
     { id: "poly-rhythm", label: "Polyrhythm", href: "/poly-rhythm" },
@@ -11,41 +9,8 @@ const GAMES = [
     { id: "tempo-recognition", label: "Tempo Recognition", href: "/tempo-recognition" },
 ];
 
-const OTHER_PAGES = [
-    { id: "impressum", label: "Legal Notice", href: "/legal-notice" },
-    { id: "datenschutz", label: "Privacy Policy", href: "/privacy-policy" },
-];
-
 export default function Navbar() {
     const pathname = usePathname();
-    const isMobile = useIsMobile();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    if (!isClient) {
-        return (
-            <nav className="w-full flex-none">
-                <div className="flex px-4 py-4 flex gap-2">
-                    {GAMES.map((game) => (
-                        <Link
-                            key={game.id}
-                            href={game.href}
-                            className={`px-4 py-2 font-medium transition-colors flex items-center ${
-                            pathname === game.href
-                                ? 'text-neutral-900 dark:text-neutral-300'
-                                : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
-                        }`}
-                        >
-                            {game.label}
-                        </Link>
-                    ))}
-                </div>
-            </nav>
-        );
-    }
 
     return (
         <nav className="w-full flex-none">
@@ -63,23 +28,6 @@ export default function Navbar() {
                         {game.label}
                     </Link>
                 ))}
-                {!isMobile && (
-                    <div className="flex px-4 py-2 flex gap-2 justify-end ml-auto">
-                        {OTHER_PAGES.map((page) => (
-                            <Link
-                                key={page.id}
-                                href={page.href}
-                                className={`px-4 py-2 font-medium transition-colors flex items-center ${
-                                    pathname === page.href
-                                        ? 'text-neutral-900 dark:text-neutral-300'
-                                        : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300'
-                                }`}
-                            >
-                                {page.label}
-                            </Link>
-                        ))}
-                    </div>
-                )}
             </div>
         </nav>
     );

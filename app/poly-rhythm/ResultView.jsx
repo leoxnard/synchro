@@ -131,7 +131,7 @@ export default function ResultView({
     };
 
     return (
-        <div className="w-full max-w-3xl h-full flex flex-col items-center animate-fade-in-up overflow-y-auto pr-2 md:pr-3">
+        <div className="w-full max-w-3xl h-full px-3 flex flex-col items-center animate-fade-in-up overflow-y-auto">
             <h2 className="text-xl md:text-2xl font-light text-neutral-400 my-2 text-center tracking-wide">Your Score</h2>
             <div className="text-6xl md:text-7xl font-black text-stone-300 mb-4 md:mb-6 drop-shadow-lg text-center">
                 {score.toFixed(1)}
@@ -139,21 +139,21 @@ export default function ResultView({
             <div className="flex flex-wrap items-center justify-center gap-3 mb-5 md:mb-7">
                 <button 
                     onClick={onTryAgain}
-                    className="px-6 py-2.5 flex items-center gap-2 rounded-full bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm"
+                    className="px-6 py-2.5 flex items-center gap-2 rounded-full text-neutral-300 bg-white/[0.03] border border-white/15 hover:bg-white/[0.06] transition-colors font-medium text-sm"
                 >
                     Try Again
                 </button>
-                {DEBUG_RESULTS_ENABLED && debugAnalysis && (
+                {DEBUG_RESULTS_ENABLED && debugAnalysis && clusterDebug != null && (
                     <button
                         onClick={() => setShowDebug((prev) => !prev)}
-                        className="sm:hidden px-5 py-2.5 rounded-full bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 hover:bg-cyan-400/15 transition-colors font-medium text-sm"
+                        className="px-5 py-2.5 rounded-full bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 hover:bg-cyan-400/15 transition-colors font-medium text-sm"
                     >
                         {showDebug ? 'Hide Analysis' : 'Show Analysis'}
                     </button>
                 )}
             </div>
 
-            <div className="w-full max-w-2xl p-3 md:p-4 mb-4 md:mb-6 text-center">
+            <div className="w-full max-w-2xl mb-4 md:mb-6 text-center">
                 <div className="flex gap-6 justify-center">
                     {lastAutoCorrectionMs !== 0 && (
                         <div>
@@ -192,7 +192,7 @@ export default function ResultView({
             </div>
       
             {/* VISUALIZATION */}
-            <div className="w-full space-y-4 bg-white/[0.03] p-3 md:p-4 rounded-2xl border border-white/10 mb-2">
+            <div className="w-full space-y-4 bg-white/[0.03] p-3 md:p-4 rounded-2xl border border-white/10">
                 {tracks.map(track => {
                     const assignedKey = track.key || '';
                     const displayKey = assignedKey === ' ' ? 'SPACE' : assignedKey.toUpperCase();
@@ -271,7 +271,7 @@ export default function ResultView({
                 </div>
             </div>
 
-            {showDebug && debugAnalysis && clusterDebug && (
+            {showDebug && debugAnalysis && clusterDebug != null && (
                 <>
                     <div className="w-full max-w-2xl mt-2">
                         {renderTapMap()}

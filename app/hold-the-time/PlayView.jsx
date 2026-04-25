@@ -60,10 +60,6 @@ export function PlayDesktop({ subLabel, label, progressPct, beatName, bpm, phase
                     <div className="absolute inset-12 rounded-full border border-white/5" />
                     
                     <div className={`text-center transition-transform duration-150 ${isPressed ? 'scale-[0.98]' : 'scale-100'}`}>
-                        <div className="text-[11px] uppercase tracking-[0.34em] text-neutral-500">Press</div>
-                        <div className={`mt-2 text-4xl font-black transition-colors duration-150 ${isPressed ? 'text-neutral-300' : 'text-stone-100'}`}>
-                            SPACEBAR
-                        </div>
                     </div>
                 </div>
             </div>

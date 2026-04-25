@@ -3,6 +3,7 @@ import NumberStepper from '../components/NumberStepper';
 import { SlArrowLeft, SlArrowRight } from 'react-icons/sl';
 
 function DesktopSetupView({
+    maxTracks,
     tracks,
     addTrack,
     updateTrack,
@@ -34,10 +35,6 @@ function DesktopSetupView({
                                         {latencyCompMs > 0 ? '+' : ''}{latencyCompMs.toFixed(0)}ms
                                     </span>
                                 </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-neutral-500 mb-1">Calibration</span>
-                                    <span className="font-bold text-neutral-400">Auto</span>
-                                </div>
                             </div>
                             <div className="shrink-0 flex gap-2">
                                 <button
@@ -52,7 +49,7 @@ function DesktopSetupView({
                     </div>
                 )}
                 <div className="grid grid-cols-2 gap-3 mb-2 pb-4 border-b border-white/10">
-                    <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} />
+                    <NumberStepper label="Tempo (BPM)" value={bpm} onChange={setBpm} min={30} max={240} step={5} allowInputEdit />
                     <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} />
                     <NumberStepper label="Beats per Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} />
                     <NumberStepper label="Count-In (Bars)" value={countInBars} onChange={setCountInBars} min={1} max={8} />
@@ -99,7 +96,7 @@ function DesktopSetupView({
             </div>
 
             <div className="absolute bottom-1 left-1 right-1 flex justify-between items-center">
-                {tracks.length < 5 ? (
+                {tracks.length < maxTracks ? (
                     <button
                         onClick={addTrack}
                         className="px-5 py-2.5 rounded-full border border-white/15 hover:bg-white/[0.05] transition-colors font-medium text-sm"
@@ -107,7 +104,7 @@ function DesktopSetupView({
                         + Rhythm
                     </button>
                 ) : (
-                    <div className="px-5 py-2.5 text-neutral-500 text-sm">Max. 5 rhythms</div>
+                    <div className="px-5 py-2.5 text-neutral-500 text-sm">Max. {maxTracks} rhythms</div>
                 )}
 
                 <div className="flex gap-2">
@@ -130,6 +127,7 @@ function DesktopSetupView({
 }
 
 function MobileSetupView({
+    maxTracks,
     tracks,
     addTrack,
     updateTrack,
@@ -143,7 +141,7 @@ function MobileSetupView({
     beatsPerMeasure,
     setBeatsPerMeasure,
     countInBars,
-    setCountInBars
+    setCountInBars,
 }) {
     const clampPulseValue = (rawValue) => Math.min(16, Math.max(1, rawValue));
 
@@ -155,16 +153,15 @@ function MobileSetupView({
 
     return (
         <div className="w-full h-full relative flex flex-col p-2 min-w-0 min-h-0">
-            <div className="w-full relative flex flex-col flex-1 min-w-0 min-h-0 pb-4">
+            <div className="w-full relative flex flex-col flex-1 min-w-0 min-h-0">
                 {/* Settings Grid */}
-                <div className="grid grid-cols-2 gap-2 mb-4 pb-4 border-b border-white/10">
-                    <NumberStepper label="Tempo" value={bpm} onChange={setBpm} min={30} max={240} step={5} compact={true} />
+                <div className="grid grid-cols-2 gap-2 mb-2 pb-2 border-b border-white/10">
+                    <NumberStepper label="Tempo" value={bpm} onChange={setBpm} min={30} max={240} step={5} compact={true} allowInputEdit />
                     <NumberStepper label="Bars" value={measures} onChange={setMeasures} min={1} max={16} compact={true} />
                     <NumberStepper label="Beats/Bar" value={beatsPerMeasure} onChange={setBeatsPerMeasure} min={1} max={16} compact={true} />
                     <NumberStepper label="Count-In" value={countInBars} onChange={setCountInBars} min={1} max={8} compact={true} />
                 </div>
 
-                {/* Rhythms Grid - with +/- directly on each card */}
                 <div className="grid grid-cols-2 gap-2 mb-4 flex-1 content-start">
                     {tracks.map((track, index) => (
                         <div key={track.id} className="rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] p-2 flex flex-col items-center text-center">
@@ -209,7 +206,7 @@ function MobileSetupView({
                     ))}
 
                     {/* Add Rhythm Card */}
-                    {tracks.length < 5 && (
+                    {tracks.length < maxTracks && (
                         <button
                             type="button"
                             onClick={addTrack}
@@ -221,16 +218,16 @@ function MobileSetupView({
                 </div>
 
                 {/* Bottom controls */}
-                <div className="w-full flex justify-center items-center gap-2 pb-2">
+                <div className="w-full flex justify-center items-center gap-2 p-2 mt-auto">
                     <button
                         onClick={startPractice}
-                        className="px-5 py-2 rounded-full border border-white/15 bg-white/[0.02] hover:bg-white/[0.06] text-neutral-300 text-xs font-bold uppercase tracking-[0.12em] transition-all"
+                        className="px-6 py-3 rounded-full border border-white/15 bg-white/[0.02] hover:bg-white/[0.06] text-neutral-300 text-xs font-bold uppercase tracking-[0.12em] transition-all"
                     >
                         PRACTICE
                     </button>
                     <button
                         onClick={startGame}
-                        className="px-6 py-2 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.12em] transition-all transform hover:scale-105"
+                        className="px-6 py-3 rounded-full bg-stone-200 hover:bg-stone-300 text-neutral-900 text-xs font-bold uppercase tracking-[0.12em] transition-all transform hover:scale-105"
                     >
                         START
                     </button>

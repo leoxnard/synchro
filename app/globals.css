@@ -40,39 +40,114 @@ input[type="number"]::-webkit-outer-spin-button {
 
 /* --- Globale Scrollbar-Anpassung --- */
 
-* {
+/* * {
   scrollbar-color: rgb(255, 255, 255, 0.06) rgba(255, 255, 255, 0.00);
 }
 
 ::-webkit-scrollbar {
-  width: 8px;   /* Breite des vertikalen Balkens */
-  height: 8px;  /* Höhe des horizontalen Balkens */
+  width: 8px;
+  height: 8px;
 }
 
-/* Der Hintergrund des Scrollbalkens (Track) */
 ::-webkit-scrollbar-track {
   background: rgba(38, 38, 38, 0);
   border-radius: 10px;
 }
 
-/* Der bewegliche Teil (Thumb) */
 ::-webkit-scrollbar-thumb {
-  background: rgba(214, 211, 209, 0.2); /* Stone-Farbe mit Transparenz */
+  background: rgba(214, 211, 209, 0.2);
   border-radius: 10px;
-  border: 2px solid transparent; /* Erzeugt einen Padding-Effekt innerhalb des Tracks */
+  border: 2px solid transparent;
   background-clip: content-box;
 }
 
-/* Hover-Effekt für den beweglichen Teil */
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(214, 211, 209, 0.4);
 }
 
-/* Speziell für den Bereich innerhalb deiner Polyrhythm-Komponente */
 .tempo-window ::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.2); /* Cyan-Ton passend zum Spiel-Akzent */
+  background: rgba(34, 211, 238, 0.2);
 }
 
 .tempo-window ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 211, 238, 0.4);
+} */
+
+/* --- Scrollbar & Platzreservierung restlos entfernen --- */
+
+* {
+  scrollbar-width: none !important;
+  scrollbar-gutter: stable;
+  scrollbar-gutter: dashed;
+  scrollbar-gutter: px 0; 
+  scrollbar-gutter: auto !important; 
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+}
+
+.tempo-window, 
+.tempo-window div,
+main {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* --- Global Background Orbs --- */
+.tempo-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(62px) saturate(1.2);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.tempo-orb-a {
+  width: 16rem;
+  height: 16rem;
+  left: -3rem;
+  top: -4rem;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
+  animation: orbFloatA 9s ease-in-out infinite;
+}
+
+.tempo-orb-b {
+  width: 18rem;
+  height: 18rem;
+  right: -4rem;
+  bottom: -5rem;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
+  animation: orbFloatB 11s ease-in-out infinite;
+}
+
+.tempo-orb-c {
+  width: 13rem;
+  height: 13rem;
+  right: 28%;
+  top: 32%;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
+  animation: orbFloatC 8s ease-in-out infinite;
+}
+
+@keyframes orbFloatA {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
+  35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
+  70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
+}
+
+@keyframes orbFloatB {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
+  40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
+  75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
+}
+
+@keyframes orbFloatC {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
+  50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
 }

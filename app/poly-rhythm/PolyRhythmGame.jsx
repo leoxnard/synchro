@@ -1,10 +1,13 @@
+// app/poly-rhythm/PolyRhythmGame.jsx
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
 import SetupView from './SetupView';
 import PlayingView from './PlayingView';
+import PracticeView from './PracticeView';
 import ResultView from './ResultView';
 import LatencyTestView from './LatencyTestView';
+import GameContainer from '../components/GameContainer';
 
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import { computeFinalScore } from './utils/scoringEngine';
@@ -23,8 +26,6 @@ import {
     BEAT_PULSE_TONE_HZ,
     GAME_TUNING
 } from './constants/gameConfig';
-
-// ==================== MOBILE FREE-TAP CAPTURE ====================
 
 export default function PolyrhythmGame() {
     const [gameState, setGameState] = useState('setup'); 
@@ -50,6 +51,8 @@ export default function PolyrhythmGame() {
     const isGameplayActive = gameState === 'countIn' || gameState === 'playing' || gameState === 'practice';
     const isMobileLayoutEnabled = isClientReady && isTouchPreferred;
 
+    const MAX_TRACKS = 6;
+
     const { 
         audioCtxRef, 
         initAudioContext, 
@@ -67,16 +70,17 @@ export default function PolyrhythmGame() {
     const inGameWidthRem = Math.max(31, (playingRowWidthPx + 84) / 16);
     const clampedInGameWidthRem = Math.min(inGameWidthRem, 46);
 
-    const windowTargetWidth = gameState === 'setup' ? '31rem' 
+    const windowTargetWidth = gameState === 'setup' ? '30rem' 
         : gameState === 'latencyTest' ? '46rem'
         : gameState === 'result' ? '46rem'
         : `${clampedInGameWidthRem.toFixed(2)}rem`;
 
     const getWindowTargetHeight = () => {
-        if (gameState === 'setup') return '38rem';
+        if (gameState === 'setup') return 'auto';
         if (gameState === 'latencyTest') return '46rem';
-        if (gameState === 'result') return '45rem';
-        return '26rem';
+        if (gameState === 'countIn' || gameState === 'playing' || gameState === 'practice') return '21rem';
+        if (gameState === 'result') return 'auto';
+        return '32rem';
     };
     const windowTargetHeight = getWindowTargetHeight();
 
@@ -86,9 +90,10 @@ export default function PolyrhythmGame() {
             2: ['shift', ' '],
             3: ['shift', 'w', ' '],
             4: ['shift', 'w', 'd', ' '],
-            5: ['shift', 'a', 'w', 'd', ' ']
+            5: ['shift', 'a', 'w', 'd', ' '],
+            6: ['shift', 'a', 'w', 'd', ' ', 'm']
         };
-        const config = configs[Math.min(total, 5)] || configs[5];
+        const config = configs[Math.min(total, MAX_TRACKS)] || configs[MAX_TRACKS];
         return config[index] || '';
     };
 
@@ -389,7 +394,7 @@ export default function PolyrhythmGame() {
     };
 
     const addTrack = () => {
-        if (tracks.length >= 5) return; 
+        if (tracks.length >= MAX_TRACKS) return; 
         const newTotal = tracks.length + 1;
         const defaultKeys = getAssignedKey(0, newTotal) !== '' ? Array.from({length: newTotal}).map((_,i) => getAssignedKey(i, newTotal)) : ['a', 'shift', 'w', ' ', 'd'];
         
@@ -755,34 +760,12 @@ export default function PolyrhythmGame() {
     if (!isClientReady) return <div className="loading-placeholder" />;
 
     return (
-        <div className={`w-full h-full min-h-0 px-2 md:px-4 md:py-4 text-neutral-100 font-sans flex items-stretch justify-stretch md:items-center md:justify-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
-            <div 
-                className={`tempo-window relative overflow-hidden isolate rounded-[1.7rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 ${!isMobileLayoutEnabled ? 'shadow-[0_20px_60px_rgba(0,0,0,0.4)]' : ''} backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
-                style={{
-                    width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
-                    height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
-                    maxWidth: '100vw',
-                    maxHeight: '100dvh',
-                }}
-            >
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] w-full h-full">
-                    <div className="tempo-orb tempo-orb-a" />
-                    <div className="tempo-orb tempo-orb-b" />
-                    <div className="tempo-orb tempo-orb-c" />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
-                </div>
-                <div 
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-stretch ${isMobileLayoutEnabled ? 'p-2 justify-start' : 'p-7 justify-center'} ${isGameplayActive ? 'overflow-hidden' : 'overflow-y-auto'}`}
-                    style={{
-                        width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
-                        height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
-                        maxWidth: '100vw',
-                        maxHeight: '100dvh',
-                        borderRadius: isMobileLayoutEnabled ? 'inherit' : '1.7rem'
-                    }}
-                >
+        <div className={`flex flex-col w-full flex-1 min-h-0 px-2 md:px-4 md:py-4 justify-center items-center ${isGameplayActive ? 'gameplay-gesture-lock' : ''}`}>
+            <GameContainer desktopWidth={windowTargetWidth} desktopHeight={windowTargetHeight}>
+                <div className={`relative z-10 flex flex-1 flex-col w-full h-full min-h-0 justify-center ${isMobileLayoutEnabled ? 'p-2' : 'p-7'}`}>
                     {gameState === 'setup' && (
                         <SetupView
+                            maxTracks={MAX_TRACKS}
                             tracks={tracks}
                             addTrack={addTrack}
                             updateTrack={updateTrack}
@@ -809,8 +792,31 @@ export default function PolyrhythmGame() {
                         />
                     )}
 
-                    {(gameState === 'countIn' || gameState === 'playing' || gameState === 'practice') && (
+                    {(gameState === 'countIn' || gameState === 'playing') && (
                         <PlayingView
+                            gameState={gameState}
+                            count={count}
+                            tracks={tracks}
+                            activeKeys={activeKeys}
+                            startTime={startTimeRef.current}
+                            measureDuration={measureDuration}
+                            countInDuration={countInBars * measureDuration}
+                            onTrackPointerDown={handleTrackPointerDown}
+                            onTrackPointerUp={handleTrackPointerUp}
+                            onTrackTouchStart={handleTrackTouchStart}
+                            onTrackTouchEnd={handleTrackTouchEnd}
+                            onMobileFreeTapTouchStart={handleMobileFreeTapTouchStart}
+                            onMobileFreeTapTouchEnd={handleMobileFreeTapTouchEnd}
+                            onMobileFreeTapPointerDown={handleMobileFreeTapPointerDown}
+                            onMobileFreeTapPointerUp={handleMobileFreeTapPointerUp}
+                            onTrackClick={handleTrackClick}
+                            useCustomLayout={isMobileLayoutEnabled}
+                            orientation={orientation}
+                        />
+                    )}
+
+                    {(gameState === 'practice') && (
+                        <PracticeView
                             gameState={gameState}
                             count={count}
                             tracks={tracks}
@@ -847,62 +853,7 @@ export default function PolyrhythmGame() {
                         />
                     )}
                 </div>
-            </div>
-
-            <style jsx>{`
-                .tempo-orb {
-                    position: absolute;
-                    border-radius: 9999px;
-                    filter: blur(62px) saturate(1.2);
-                    mix-blend-mode: screen;
-                    pointer-events: none;
-                    opacity: 0;
-                }
-
-                .tempo-orb-a {
-                    width: 16rem;
-                    height: 16rem;
-                    left: -3rem;
-                    top: -4rem;
-                    background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
-                    animation: orbFloatA 9s ease-in-out infinite;
-                }
-
-                .tempo-orb-b {
-                    width: 18rem;
-                    height: 18rem;
-                    right: -4rem;
-                    bottom: -5rem;
-                    background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
-                    animation: orbFloatB 11s ease-in-out infinite;
-                }
-
-                .tempo-orb-c {
-                    width: 13rem;
-                    height: 13rem;
-                    right: 28%;
-                    top: 32%;
-                    background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
-                    animation: orbFloatC 8s ease-in-out infinite;
-                }
-
-                @keyframes orbFloatA {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
-                    35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
-                    70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
-                }
-
-                @keyframes orbFloatB {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
-                    40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
-                    75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
-                }
-
-                @keyframes orbFloatC {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
-                    50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
-                }
-            `}</style>
+            </GameContainer>
         </div>
     );
 }

@@ -1,3 +1,4 @@
+// app/hold-the-time/HoldTheTime.jsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -5,6 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import SetupView from './SetupView';
 import ResultView from './ResultView';
 import PlayView from './PlayView';
+import GameContainer from '../components/GameContainer';
 
 import { SCORING_CONFIG, BEATS } from './constants/gameConfig';
 import { clamp } from './utils/mathHelpers';
@@ -43,26 +45,8 @@ export default function HoldTheTime() {
     const sourceNodeRef = useRef(null);
     const gainNodeRef = useRef(null);
 
-    const getWindowTargetWidth = () => {
-        if (gameState === 'results') return '55rem';
-        return '28rem';
-    };
-    
-    const getWindowTargetHeight = () => {
-        if (gameState === 'setup') return '36rem';
-        if (gameState === 'running') return '32rem';
-        if (gameState === 'results') {
-            return showAnalysis ? 'calc(100% - 0rem)' : '32rem'; 
-        }
-        return '32rem';
-    };
-
-    const windowTargetWidth = getWindowTargetWidth();
-    const windowTargetHeight = getWindowTargetHeight();
-
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
-    const isMobileLayoutEnabled = isClient && isMobile;
 
     const stopPreview = () => {
         if (previewAudioRef.current) {
@@ -287,7 +271,12 @@ export default function HoldTheTime() {
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const ctx = new AudioContext();
+        const unmute = (await import('iosunmute')).default;
+        unmute(ctx);
         audioCtxRef.current = ctx;
+        if (ctx.state !== 'running') {
+            ctx.resume().catch(() => {});
+        }
 
         const response = await fetch(selectedBeat.src);
         const arrayBuffer = await response.arrayBuffer();
@@ -333,11 +322,7 @@ export default function HoldTheTime() {
     if (gameState === 'running') {
         if (phase === 'listening') {
             playSubLabel = 'Listening';
-            if (tapCount === 0) {
-                playLabel = isMobile ? 'Tap along to start' : 'Spacebar to start';
-            } else {
-                playLabel = tapCount >= triggerTaps ? '0 taps until silence' : `${triggerTaps - tapCount} taps until silence`;
-            }
+            playLabel = isMobile ? 'Tap with the beat' : 'Press Spacebar with the beat';
             progressPct = clamp((tapCount / triggerTaps) * 100, 0, 100);
         } else if (phase === 'silence') {
             playSubLabel = 'Silence Phase';
@@ -358,142 +343,99 @@ export default function HoldTheTime() {
 
     if (!isClient) return <div className="loading-placeholder" />;
 
+    const desktopWidth = gameState === 'results' ? '55rem' : '30rem';
+    
+    let desktopHeight = '32rem';
+    let mobileHeight = '100%'; // optional 'auto'
+    
+    if (gameState === 'setup') {
+        desktopHeight = '40rem';
+        mobileHeight = '100%';
+    }
+    if (gameState === 'running') {
+        desktopHeight = '34rem';
+        mobileHeight = '100%';
+    }
+    if (gameState === 'results') {
+        desktopHeight = 'auto';
+        mobileHeight = '100%';
+    }
+
     return (
-        <div className="w-full h-full px-2 md:px-4 md:py-4 flex items-center justify-center">
-            <div 
-                className={`relative isolate mx-auto rounded-[1.6rem] border border-white/10 dark:bg-neutral-900/80 bg-black/90 ${!isMobileLayoutEnabled ? 'shadow-[0_20px_60px_rgba(0,0,0,0.4)]' : ''} backdrop-blur transition-all duration-[300ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
-                style={{
-                    width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
-                    height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
-                    maxWidth: '100vw',
-                    maxHeight: '100dvh'
-                }}
-            >
-                <div className="pointer-events-none absolute inset-0 rounded-[inherit] w-full h-full">
-                    <div className="tempo-orb tempo-orb-a" />
-                    <div className="tempo-orb tempo-orb-b" />
-                    <div className="tempo-orb tempo-orb-c" />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
-                </div>
-                <div 
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col ${isMobileLayoutEnabled ? 'p-2 justify-start' : 'p-4 justify-center'} ${gameState === 'running' ? 'overflow-hidden' : 'overflow-y-auto'}`}
-                    style={{
-                        width: isMobileLayoutEnabled ? '100%' : windowTargetWidth,
-                        height: isMobileLayoutEnabled ? '100%' : windowTargetHeight,
-                        maxWidth: '100vw',
-                        maxHeight: '100dvh',
-                        borderRadius: isMobileLayoutEnabled ? 'inherit' : '1.6rem'
-                    }}
-                >
-                    <div className="flex flex-1 h-full min-h-0 flex-col gap-4 m-2">
-                        {gameState === 'setup' && (
-                            <SetupView
-                                triggerTaps={triggerTaps}
-                                setTriggerTaps={setTriggerTaps}
-                                silentBars={silentBars}
-                                setSilentBars={setSilentBars}
-                                selectedBeatId={selectedBeatId}
-                                setSelectedBeatId={setSelectedBeatId}
-                                onStart={startSession}
-                                previewingBeatId={previewingBeatId}
-                                onPreviewStart={startPreview}
-                                isMobile={isMobile}
-                            />
-                        )}
-
-                        {gameState === 'running' && (
-                            <PlayView
-                                subLabel={playSubLabel}
-                                label={playLabel}
-                                progressPct={progressPct}
-                                onTap={recordTap}
-                                beatName={selectedBeat.name}
-                                bpm={selectedBeat.bpm}
-                                isMobile={isMobile}
-                                setTapRipples={setTapRipples}
-                                phase={phase}
-                            />
-                        )}
-
-                        {gameState === 'results' && analysis && (
-                            <ResultView
-                                analysis={analysis}
-                                selectedBeat={selectedBeat}
-                                onPlayAgain={startSession}
-                                onBackToSetup={restartToSetup}
-                                isMobile={isMobile}
-                                showAnalysis={showAnalysis}
-                                onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
-                            />
-                        )}
-                    </div>
-                    {gameState === 'running' && tapRipples.map((ripple) => (
-                        <div
-                            key={ripple.id}
-                            className="pointer-events-none absolute z-20 h-24 w-24 rounded-full"
-                            style={{
-                                left: `${ripple.x}%`, top: `${ripple.y}%`,
-                                transform: 'translate(-50%, -50%)',
-                                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%)',
-                                filter: 'drop-shadow(0 0 12px rgba(125,211,252,0.55))',
-                                animation: 'tapRipple 0.35s ease-out forwards',
-                            }}
+        <div className="flex flex-col w-full flex-1 px-2 md:px-4 md:py-4 min-h-0 justify-center items-center">
+            <GameContainer desktopWidth={desktopWidth} desktopHeight={desktopHeight} mobileHeight={mobileHeight}>
+                <div className="flex flex-1 flex-col p-4 md:p-8 w-full h-full min-h-0">
+                    {gameState === 'setup' && (
+                        <SetupView
+                            triggerTaps={triggerTaps}
+                            setTriggerTaps={setTriggerTaps}
+                            silentBars={silentBars}
+                            setSilentBars={setSilentBars}
+                            selectedBeatId={selectedBeatId}
+                            setSelectedBeatId={setSelectedBeatId}
+                            onStart={startSession}
+                            previewingBeatId={previewingBeatId}
+                            onPreviewStart={startPreview}
+                            isMobile={isMobile}
                         />
-                    ))}
-                </div>
-            </div>
+                    )}
 
-            <style jsx>{`
-                .tempo-orb {
-                    position: absolute;
-                    border-radius: 9999px;
-                    filter: blur(62px) saturate(1.2);
-                    mix-blend-mode: screen;
-                    pointer-events: none;
-                    opacity: 0;
-                }
-                .tempo-orb-a {
-                    width: 16rem; height: 16rem; left: -3rem; top: -4rem;
-                    background: radial-gradient(circle, rgba(34, 211, 238, 0.42) 0%, rgba(34, 211, 238, 0.04) 72%);
-                    animation: orbFloatA 9s ease-in-out infinite;
-                }
-                .tempo-orb-b {
-                    width: 18rem; height: 18rem; right: -4rem; bottom: -5rem;
-                    background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.04) 74%);
-                    animation: orbFloatB 11s ease-in-out infinite;
-                }
-                .tempo-orb-c {
-                    width: 13rem; height: 13rem; right: 28%; top: 32%;
-                    background: radial-gradient(circle, rgba(167, 139, 250, 0.32) 0%, rgba(167, 139, 250, 0.04) 70%);
-                    animation: orbFloatC 8s ease-in-out infinite;
-                }
-                @keyframes orbFloatA {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
-                    35% { transform: translate3d(4rem, 2.5rem, 0) scale(1.08); opacity: 0.6; }
-                    70% { transform: translate3d(2rem, 5rem, 0) scale(1); opacity: 0.24; }
-                }
-                @keyframes orbFloatB {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.3; }
-                    40% { transform: translate3d(-3.5rem, -2.5rem, 0) scale(1.12); opacity: 0.55; }
-                    75% { transform: translate3d(-1.2rem, -5.5rem, 0) scale(0.96); opacity: 0.22; }
-                }
-                @keyframes orbFloatC {
-                    0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.22; }
-                    50% { transform: translate3d(1.6rem, -1.4rem, 0) scale(1.1); opacity: 0.44; }
-                }
-                .tap-ripple-effect {
-                    position: absolute; z-index: 20; height: 6rem; width: 6rem;
-                    border-radius: 9999px; pointer-events: none;
-                    transform: translate(-50%, -50%);
-                    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%);
-                    filter: drop-shadow(0 0 12px rgba(125,211,252,0.55));
-                    animation: tapRipple 0.35s ease-out forwards;
-                }
-                @keyframes tapRipple {
-                    0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
-                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
-                }
-            `}</style>
+                    {gameState === 'running' && (
+                        <PlayView
+                            subLabel={playSubLabel}
+                            label={playLabel}
+                            progressPct={progressPct}
+                            onTap={recordTap}
+                            beatName={selectedBeat.name}
+                            bpm={selectedBeat.bpm}
+                            isMobile={isMobile}
+                            setTapRipples={setTapRipples}
+                            phase={phase}
+                        />
+                    )}
+
+                    {gameState === 'results' && analysis && (
+                        <ResultView
+                            analysis={analysis}
+                            selectedBeat={selectedBeat}
+                            onPlayAgain={startSession}
+                            onBackToSetup={restartToSetup}
+                            isMobile={isMobile}
+                            showAnalysis={showAnalysis}
+                            onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+                        />
+                    )}
+                </div>
+
+                {/* Tap Ripples */}
+                {gameState === 'running' && tapRipples.map((ripple) => (
+                    <div
+                        key={ripple.id}
+                        className="pointer-events-none absolute z-20 h-24 w-24 rounded-full"
+                        style={{
+                            left: `${ripple.x}%`, top: `${ripple.y}%`,
+                            transform: 'translate(-50%, -50%)',
+                            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%)',
+                            filter: 'drop-shadow(0 0 12px rgba(125,211,252,0.55))',
+                            animation: 'tapRipple 0.35s ease-out forwards',
+                        }}
+                    />
+                ))}
+                <style jsx>{`
+                    .tap-ripple-effect {
+                        position: absolute; z-index: 20; height: 6rem; width: 6rem;
+                        border-radius: 9999px; pointer-events: none;
+                        transform: translate(-50%, -50%);
+                        background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(125,211,252,0.7) 24%, rgba(34,211,238,0.22) 48%, transparent 72%);
+                        filter: drop-shadow(0 0 12px rgba(125,211,252,0.55));
+                        animation: tapRipple 0.35s ease-out forwards;
+                    }
+                    @keyframes tapRipple {
+                        0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
+                        100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+                    }
+                `}</style>
+            </GameContainer>
         </div>
     );
 }
