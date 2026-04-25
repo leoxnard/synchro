@@ -345,31 +345,43 @@ export default function PlayingView({
 
     // Desktop layout with MetronomePendulum bars
     return (
-        <div className="w-full text-center space-y-8 flex flex-col items-center">
-            {gameState === 'countIn' ? (
-                <div className="w-full flex-1 flex flex-col items-center justify-center">
-                    <div className="animate-pulse flex flex-col items-center mb-6">
-                        <div className="text-8xl font-black text-white">{count > 0 ? count : 'GO!'}</div>
-                    </div>
-            
-                    <div className="w-full px-8 opacity-70 flex flex-col gap-2">
-                        {tracks.map(track => (
-                            <MetronomePendulum
-                                key={track.id}
-                                label={track.key === ' ' ? 'SPACE' : track.key}
-                                measureDuration={measureDuration} 
-                                countInDuration={countInDuration}
-                                basePulses={track.pulses} 
-                                startTime={startTime} 
-                            />
-                        ))}
-                    </div>
+        <div className="w-full text-center grid">
+            <div 
+                className={`col-start-1 row-start-1 w-full flex flex-col items-center justify-center transition-opacity duration-100 ${
+                    gameState === 'countIn' 
+                        ? 'opacity-100 pointer-events-auto z-10' 
+                        : 'opacity-0 pointer-events-none z-0'
+                }`}
+            >
+                <div className="animate-pulse flex flex-col items-center mb-6">
+                    <div className="text-8xl font-black text-white">{count > 0 ? count : 'GO!'}</div>
                 </div>
-            ) : (
-                <div className="w-full flex justify-center" style={{ gap: `${gapPx}px` }}>
-                    {tracks.map((track) => renderTrackPad(track))}
+        
+                <div className="w-full px-8 opacity-70 flex flex-col gap-2">
+                    {tracks.map(track => (
+                        <MetronomePendulum
+                            key={track.id}
+                            label={track.key === ' ' ? 'SPACE' : track.key}
+                            measureDuration={measureDuration} 
+                            countInDuration={countInDuration}
+                            basePulses={track.pulses} 
+                            startTime={startTime} 
+                        />
+                    ))}
                 </div>
-            )}
+            </div>
+
+            <div 
+                className={`col-start-1 row-start-1 w-full flex items-center justify-center transition-opacity duration-100 ${
+                    gameState === 'countIn' 
+                        ? 'opacity-0 pointer-events-none z-0' 
+                        : 'opacity-100 pointer-events-auto z-10'
+                }`} 
+                style={{ gap: `${gapPx}px` }}
+            >
+                {tracks.map((track) => renderTrackPad(track))}
+            </div>
+
         </div>
     );
 }

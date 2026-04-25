@@ -22,10 +22,12 @@ export default function GameContainer({
             mobileHeight === 'auto' ? 'h-auto' : 
                 'h-[var(--mobile-h)]';
 
+    const layoutTransition = { type: "spring" as const, bounce: 0, duration: 1 };
+
     return (
         <motion.div
             layout
-            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            transition={layoutTransition}
             style={{
                 "--desktop-w": desktopWidth,
                 "--desktop-h": desktopHeight,
@@ -38,22 +40,28 @@ export default function GameContainer({
                 rounded-[1.7rem]
                 overflow-hidden
                 
-                /* FIX 1: Verhindert, dass das Fenster im Handy-Querformat über Navbar/Footer wächst */
                 max-h-full max-w-full shrink
                 
-                /* MOBILE FIRST */
                 w-full ${mobileClasses}
                 
-                /* FIX 2: md:flex-none stoppt das "flex-1" vom Polyrhythmus, damit es am Desktop wieder zentriert ist! */
                 md:w-[var(--desktop-w)] md:h-[var(--desktop-h)] md:flex-none
             `}
         >
-            <div className="pointer-events-none absolute inset-0 z-0">
-                <div className="tempo-orb tempo-orb-a" />
-                <div className="tempo-orb tempo-orb-b" />
-                <div className="tempo-orb tempo-orb-c" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
-            </div>
+            <motion.div 
+                layout 
+                transition={layoutTransition} 
+                className="pointer-events-none absolute inset-0 z-0"
+            >
+                <motion.div layout transition={layoutTransition} className="tempo-orb tempo-orb-a" />
+                <motion.div layout transition={layoutTransition} className="tempo-orb tempo-orb-b" />
+                <motion.div layout transition={layoutTransition} className="tempo-orb tempo-orb-c" />
+                
+                <motion.div 
+                    layout 
+                    transition={layoutTransition} 
+                    className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" 
+                />
+            </motion.div>
 
             <div className="relative z-10 flex flex-1 flex-col w-full h-full min-h-0 overflow-y-auto">
                 {children}
