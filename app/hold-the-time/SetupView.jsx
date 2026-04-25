@@ -26,16 +26,15 @@ function BeatCard({ beat, selected, onSelect, isPreviewing, onPreviewStart }) {
     );
 }
 
-function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
+function SetupDesktop({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
         <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
             <div className="flex flex-1 flex-col justify-center w-full pb-8">
-                <div className="text-center border-b border-white/10 pb-4 mb-6">
+                <div className="text-center border-b border-white/10 pb-4 mb-4">
                     <span className="text-3xl font-light text-neutral-400 tracking-widest">Hold The Tempo</span>
                 </div>
                 
                 <div className="grid gap-4 pb-6 md:grid-cols-1 border-b border-white/10">
-                    {/* <NumberStepper label="Taps till silent" value={triggerTaps} onChange={setTriggerTaps} min={4} max={32} /> */}
                     <NumberStepper label="Silent bars" value={silentBars} onChange={setSilentBars} min={1} max={16} />
                 </div>
                 
@@ -61,7 +60,7 @@ function SetupDesktop({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, 
     );
 }
 
-function SetupMobile({ triggerTaps, setTriggerTaps, silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
+function SetupMobile({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
     return (
         <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
             

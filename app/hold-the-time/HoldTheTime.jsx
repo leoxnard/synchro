@@ -15,7 +15,6 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function HoldTheTime() {
     const [selectedBeatId, setSelectedBeatId] = useState(BEATS[0].id);
-    const [triggerTaps, setTriggerTaps] = useState(8);
     const [silentBars, setSilentBars] = useState(4);
     const [gameState, setGameState] = useState('setup');
     const [showAnalysis, setShowAnalysis] = useState(false);
@@ -23,15 +22,15 @@ export default function HoldTheTime() {
     const [tapCount, setTapCount] = useState(0);
     const [sessionProgress, setSessionProgress] = useState(0);
     const [analysis, setAnalysis] = useState(null);
-
+    
     const [tapRipples, setTapRipples] = useState([]);
     
     const [previewingBeatId, setPreviewingBeatId] = useState(null);
     const previewAudioRef = useRef(null);
-
+    
     const selectedBeat = useMemo(() => BEATS.find((beat) => beat.id === selectedBeatId) || BEATS[0], [selectedBeatId]);
     const beatMs = 60000 / selectedBeat.bpm;
-
+    
     const timerRefs = useRef([]);
     const clockRef = useRef(0);
     
@@ -44,11 +43,13 @@ export default function HoldTheTime() {
     const audioCtxRef = useRef(null);
     const sourceNodeRef = useRef(null);
     const gainNodeRef = useRef(null);
-
+    
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
-
-    const stopPreview = () => {
+    
+    const triggerTaps = 8;
+    
+    function stopPreview() {
         if (previewAudioRef.current) {
             previewAudioRef.current.pause();
             previewAudioRef.current = null;
@@ -56,7 +57,7 @@ export default function HoldTheTime() {
         setPreviewingBeatId(null);
     };
 
-    const startPreview = (beatId) => {
+    function startPreview(beatId) {
         if (previewingBeatId === beatId) return;
         stopPreview();
         
@@ -74,6 +75,7 @@ export default function HoldTheTime() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsClient(true);
     }, []);
 
@@ -134,7 +136,7 @@ export default function HoldTheTime() {
         };
     }, []);
 
-    const clearSession = () => {
+    function clearSession() {
         timerRefs.current.forEach((timerId) => clearTimeout(timerId));
         timerRefs.current = [];
         if (clockRef.current) cancelAnimationFrame(clockRef.current);
@@ -161,7 +163,7 @@ export default function HoldTheTime() {
         silenceStartRef.current = 0;
     };
 
-    const spawnRipple = (event) => {
+    function spawnRipple(event) {
         if (event && event.isKeyboard) return;
 
         let x = 50;
@@ -186,8 +188,9 @@ export default function HoldTheTime() {
         }, 350);
     };
 
-    const triggerSilencePhase = () => {
+    function triggerSilencePhase() {
         setPhase('silence');
+         
         const nowMs = performance.now();
         silenceStartRef.current = nowMs;
 
@@ -217,9 +220,10 @@ export default function HoldTheTime() {
         }, silentMs + returnMs));
     };
 
-    const recordTap = (event) => {
+    function recordTap(event) {
         if (gameState !== 'running') return;
     
+         
         const time = performance.now() - sessionStartRef.current;
         
         if (tapEntriesRef.current.length > 0) {
@@ -242,7 +246,7 @@ export default function HoldTheTime() {
         }
     };
 
-    const finishSession = () => {
+    function finishSession() {
         const actualActiveMs = silenceStartRef.current > 0 
             ? silenceStartRef.current - sessionStartRef.current 
             : triggerTaps * beatMs;
@@ -261,7 +265,7 @@ export default function HoldTheTime() {
         setPhase('return');
     };
 
-    const startSession = async () => {
+    async function startSession() {
         stopPreview();
         clearSession();
         setShowAnalysis(false);
@@ -307,7 +311,7 @@ export default function HoldTheTime() {
         clockRef.current = requestAnimationFrame(updateClock);
     };
 
-    const restartToSetup = () => {
+    function restartToSetup() {
         clearSession();
         setAnalysis(null);
         setShowAnalysis(false);
@@ -327,6 +331,7 @@ export default function HoldTheTime() {
         } else if (phase === 'silence') {
             playSubLabel = 'Silence Phase';
             playLabel = 'Keep the pulse';
+             
             const elapsed = sessionProgress - silenceStartRef.current;
             const silentMs = silentBars * beatMs * 4;
             
@@ -335,6 +340,7 @@ export default function HoldTheTime() {
         } else if (phase === 'return') {
             playSubLabel = 'Return Phase';
             playLabel = 'Beat returns';
+             
             const elapsed = sessionProgress - (silenceStartRef.current + (silentBars * beatMs * 4));
             const returnMs = SCORING_CONFIG.returnBars * beatMs * 4;
             progressPct = clamp((elapsed / returnMs) * 100, 0, 100);
@@ -367,8 +373,6 @@ export default function HoldTheTime() {
                 <div className="flex flex-1 flex-col p-4 md:p-8 w-full h-full min-h-0">
                     {gameState === 'setup' && (
                         <SetupView
-                            triggerTaps={triggerTaps}
-                            setTriggerTaps={setTriggerTaps}
                             silentBars={silentBars}
                             setSilentBars={setSilentBars}
                             selectedBeatId={selectedBeatId}

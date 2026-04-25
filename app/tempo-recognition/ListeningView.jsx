@@ -135,7 +135,7 @@ export default function ListeningView({ targetTempo, audioCtx, onListeningComple
         };
     }, [targetTempo, audioCtx, onListeningComplete]);
 
-return (
+    return (
         <div className="flex-1 w-full flex flex-col">
             <div className="relative w-full flex-1 max-w-lg mx-auto text-center flex flex-col items-center px-4 pb-4 md:pb-6 min-h-0">
                 <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0">

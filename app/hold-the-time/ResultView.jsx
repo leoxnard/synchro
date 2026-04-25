@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SCORING_CONFIG } from './constants/gameConfig';
 import { formatMs, clamp } from './utils/mathHelpers';
-import { on } from 'events';
 
 function StatCard({ label, value, highlight = false }) {
     return (
@@ -108,14 +107,14 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
                     className="relative h-full min-w-full" 
                     style={{ width: `100%`, willChange: 'width' }}
                 >
-                    {/* Hintergrund (Stille) */}
+                    {/* Silence Zone */}
                     <div className="absolute inset-y-0 bg-amber-500/5 border-x border-amber-500/10"
-                         style={{ left: `${((silenceStartMs - startMs) / widthMs) * 100}%`, width: `${((silenceEndMs - silenceStartMs) / widthMs) * 100}%` }} />
+                        style={{ left: `${((silenceStartMs - startMs) / widthMs) * 100}%`, width: `${((silenceEndMs - silenceStartMs) / widthMs) * 100}%` }} />
                     
                     {/* Beats */}
                     {expectedBeats.map(bt => (
                         <div key={bt} className={`absolute inset-y-0 ${Math.abs(bt - silenceEndMs) < 1 ? 'w-[2px] bg-fuchsia-500 z-10' : 'w-px bg-white/10'}`} 
-                             style={{ left: `${((bt - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }} />
+                            style={{ left: `${((bt - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }} />
                     ))}
                     
                     {/* Taps */}
@@ -124,8 +123,8 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
                         const diff = Math.round(pair.deltaMs);
                         return (
                             <div key={pair.expectedTime} 
-                                 className="group absolute top-4 bottom-4 w-8 flex justify-center items-center z-20 hover:z-50 cursor-crosshair"
-                                 style={{ left: `${((pair.correctedTime - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }}>
+                                className="group absolute top-4 bottom-4 w-8 flex justify-center items-center z-20 hover:z-50 cursor-crosshair"
+                                style={{ left: `${((pair.correctedTime - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }}>
                                 <div className={`h-full rounded-full transition-all group-hover:scale-y-110 ${isReturn ? 'w-1 bg-fuchsia-300 shadow-[0_0_10px_#d946ef]' : 'w-[3px] ' + (diff < -15 ? 'bg-emerald-400' : diff > 15 ? 'bg-amber-400' : 'bg-cyan-400')}`} />
                                 
                                 {/* Tooltip Position angepasst: -top-5 statt -top-8 */}

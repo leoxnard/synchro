@@ -88,61 +88,71 @@ export default function LatencyTestView({ onClose }) {
         setActiveKeys({});
     }, []);
 
-    useEffect(async () => {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContext();
-        const unmute = (await import('iosunmute')).default;
-        unmute(ctx);
-        audioCtxRef.current = ctx;
-        if (ctx.state !== 'running') {
-            ctx.resume().catch(() => {});
-        }
-
-        const leadIn = 0.2;
-        nextBeatTimeRef.current = ctx.currentTime + leadIn;
-
-        const scheduleClick = (whenSeconds) => {
-            if (!audioCtxRef.current) return;
-            const osc = audioCtxRef.current.createOscillator();
-            const gain = audioCtxRef.current.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtxRef.current.destination);
-            osc.frequency.value = 1000;
-            gain.gain.setValueAtTime(0.42, whenSeconds);
-            gain.gain.exponentialRampToValueAtTime(0.001, whenSeconds + 0.07);
-            osc.start(whenSeconds);
-            osc.stop(whenSeconds + 0.07);
-        };
-
-        schedulerRef.current = window.setInterval(() => {
-            const currentAudioTime = ctx.currentTime;
-            while (nextBeatTimeRef.current < currentAudioTime + SCHEDULE_AHEAD_SECONDS) {
-                const beatPerfMs = getAudioContextOffset() + (nextBeatTimeRef.current * 1000);
-                beatTimesRef.current.push(beatPerfMs);
-                if (beatTimesRef.current.length > MAX_EVENTS) {
-                    beatTimesRef.current = beatTimesRef.current.slice(-MAX_EVENTS);
-                }
-
-                setBeatTimes([...beatTimesRef.current]);
-
-                scheduleClick(nextBeatTimeRef.current);
-                nextBeatTimeRef.current += beatIntervalMs / 1000;
+    useEffect(() => {
+        let isMounted = true;
+        const initAudio = async () => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContext();
+            const unmute = (await import('iosunmute')).default;
+            if (!isMounted) return;
+            unmute(ctx);
+            audioCtxRef.current = ctx;
+            if (ctx.state !== 'running') {
+                ctx.resume().catch(() => {});
             }
 
-            const cutoff = performance.now() - (WINDOW_BEFORE_MS + 200);
-            beatTimesRef.current = beatTimesRef.current.filter((time) => time >= cutoff);
-            setBeatTimes([...beatTimesRef.current]);
-        }, SCHEDULE_INTERVAL_MS);
+            const leadIn = 0.2;
+            nextBeatTimeRef.current = ctx.currentTime + leadIn;
 
-        const tick = () => {
-            setNowMs(performance.now());
+            const scheduleClick = (whenSeconds) => {
+                if (!audioCtxRef.current) return;
+                const osc = audioCtxRef.current.createOscillator();
+                const gain = audioCtxRef.current.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtxRef.current.destination);
+                osc.frequency.value = 1000;
+                gain.gain.setValueAtTime(0.42, whenSeconds);
+                gain.gain.exponentialRampToValueAtTime(0.001, whenSeconds + 0.07);
+                osc.start(whenSeconds);
+                osc.stop(whenSeconds + 0.07);
+            };
+
+            schedulerRef.current = window.setInterval(() => {
+                const currentAudioTime = ctx.currentTime;
+                while (nextBeatTimeRef.current < currentAudioTime + SCHEDULE_AHEAD_SECONDS) {
+                    const beatPerfMs = getAudioContextOffset() + (nextBeatTimeRef.current * 1000);
+                    beatTimesRef.current.push(beatPerfMs);
+                    if (beatTimesRef.current.length > MAX_EVENTS) {
+                        beatTimesRef.current = beatTimesRef.current.slice(-MAX_EVENTS);
+                    }
+
+                    setBeatTimes([...beatTimesRef.current]);
+
+                    scheduleClick(nextBeatTimeRef.current);
+                    nextBeatTimeRef.current += beatIntervalMs / 1000;
+                }
+
+                const cutoff = performance.now() - (WINDOW_BEFORE_MS + 200);
+                beatTimesRef.current = beatTimesRef.current.filter((time) => time >= cutoff);
+                setBeatTimes([...beatTimesRef.current]);
+            }, SCHEDULE_INTERVAL_MS);
+
+            const tick = () => {
+                setNowMs(performance.now());
+                rafRef.current = window.requestAnimationFrame(tick);
+            };
             rafRef.current = window.requestAnimationFrame(tick);
         };
-        rafRef.current = window.requestAnimationFrame(tick);
+        
+        initAudio();
 
         return () => {
+            isMounted = false;
             if (rafRef.current) {
                 window.cancelAnimationFrame(rafRef.current);
+            }
+            if (schedulerRef.current) {
+                clearInterval(schedulerRef.current);
             }
             stopAudio();
         };

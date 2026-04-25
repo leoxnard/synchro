@@ -114,6 +114,7 @@ export default function TempoRecognitionGame() {
     }, [audioCtx]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsClient(true);
     }, []);
 

@@ -306,7 +306,6 @@ export default function PlayingView({
                                 }}
                             >
                                 {tracks.map(track => {
-                                    const normalizedKey = typeof track.key === 'string' ? track.key.toLowerCase() : '';
                                     return (
                                         <MobilePracticeNode
                                             key={track.id} track={track} measureDuration={measureDuration} 

@@ -19,8 +19,8 @@ export default function GameContainer({
     
     const mobileClasses = 
         mobileHeight === '100%' ? 'flex-1 h-full' : 
-        mobileHeight === 'auto' ? 'h-auto' : 
-        'h-[var(--mobile-h)]';
+            mobileHeight === 'auto' ? 'h-auto' : 
+                'h-[var(--mobile-h)]';
 
     return (
         <motion.div

@@ -72,8 +72,8 @@ export default function PolyrhythmGame() {
 
     const windowTargetWidth = gameState === 'setup' ? '30rem' 
         : gameState === 'latencyTest' ? '46rem'
-        : gameState === 'result' ? '46rem'
-        : `${clampedInGameWidthRem.toFixed(2)}rem`;
+            : gameState === 'result' ? '46rem'
+                : `${clampedInGameWidthRem.toFixed(2)}rem`;
 
     const getWindowTargetHeight = () => {
         if (gameState === 'setup') return 'auto';
@@ -704,6 +704,7 @@ export default function PolyrhythmGame() {
 
     useEffect(() => {
         if (!isGameplayActive) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             clearInputVisualState();
             return;
         }
@@ -755,6 +756,7 @@ export default function PolyrhythmGame() {
             stopAllAudioNodes();
             closeAudioContext();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (!isClientReady) return <div className="loading-placeholder" />;
@@ -798,6 +800,7 @@ export default function PolyrhythmGame() {
                             count={count}
                             tracks={tracks}
                             activeKeys={activeKeys}
+                            // eslint-disable-next-line react-hooks/refs
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
                             countInDuration={countInBars * measureDuration}
@@ -821,6 +824,7 @@ export default function PolyrhythmGame() {
                             count={count}
                             tracks={tracks}
                             activeKeys={activeKeys}
+                            // eslint-disable-next-line react-hooks/refs
                             startTime={startTimeRef.current}
                             measureDuration={measureDuration}
                             countInDuration={countInBars * measureDuration}

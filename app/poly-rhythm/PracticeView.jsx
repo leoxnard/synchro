@@ -213,7 +213,7 @@ export default function PracticeView({
 
         animationFrameId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(animationFrameId);
-    }, [gameState, tracks, startTime, countInDuration, measureDuration]);
+    }, [gameState, tracks, startTime, measureDuration]);
 
     const renderTrackPad = (track, absoluteStyle) => {
         const assignedKey = track.key || '';
