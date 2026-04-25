@@ -7,6 +7,7 @@ export const SCHEDULE_INTERVAL_MS = 25;
 export const SCHEDULE_AHEAD_SECONDS = 8;
 export const BPM = 60;
 export const MIN_ALLOWED_NEGATIVE_LATENCY_MS = 0;
+export const MAX_TRACKS = 5;
 
 export const MAX_LATENCY_COMP_MS = 2000;
 export const DEFAULT_LATENCY_COMP_MS = 0; 

@@ -24,7 +24,8 @@ import {
     END_TAP_BASE_BUFFER_MS,
     BEAT_ACCENT_TONE_HZ,
     BEAT_PULSE_TONE_HZ,
-    GAME_TUNING
+    GAME_TUNING,
+    MAX_TRACKS
 } from './constants/gameConfig';
 
 export default function PolyrhythmGame() {
@@ -50,8 +51,6 @@ export default function PolyrhythmGame() {
     const [orientation, setOrientation] = useState('portrait');
     const isGameplayActive = gameState === 'countIn' || gameState === 'playing' || gameState === 'practice';
     const isMobileLayoutEnabled = isClientReady && isTouchPreferred;
-
-    const MAX_TRACKS = 6;
 
     const { 
         audioCtxRef, 
