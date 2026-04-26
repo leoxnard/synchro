@@ -21,5 +21,18 @@ export const estimateCalibrationMs = (taps, beatMs, actualActiveMs) => {
         return offset;
     });
 
-    return median(offsets);
+    const initialMedian = median(offsets);
+    const outlierThreshold = beatMs * 0.25; 
+    
+    const validOffsets = offsets.filter(offset => {
+        let diff = Math.abs(offset - initialMedian);
+        if (diff > beatMs / 2) {
+            diff = beatMs - diff;
+        }
+        return diff <= outlierThreshold;
+    });
+
+    if (validOffsets.length === 0) return initialMedian;
+
+    return median(validOffsets);
 };

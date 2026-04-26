@@ -1,32 +1,41 @@
 export const SCORING_CONFIG = {
     returnBars: 1,
 
-    // --- ACCURACY  ---
-    accuracyInflectionPct: 0.18,
-    accuracySteepness: 3.8,
-    accuracyLinearDropMs: 1200,   
-
-    // --- CONSISTENCY  ---
-    consistencyInflectionPct: 0.09,
-    consistencySteepness: 4.7,
-    consistencyLinearDropMs: 1500,  
-
     weightConsistency: 0.5,
     weightAccuracy: 0.5,
-
-    faultPenaltyMultiplier: 4, // multiplier for the penalty per fault (missed beat or extra tap) applied to the consistency score
-    earlyLateThresholdMs: 15, // ms threshold for counting as early or late tap
-
-    extraTapThresholdPct: 0.6, // below this ratio of the beat interval, it's considered an extra tap rather than a late tap
-    missingTapThresholdPct: 1.4, // above this ratio of the beat interval, it's considered a missed tap rather than a late tap
-
-    baseSilenceBeats: 4,     // Bis zu dieser Anzahl an Schlägen gibt es keine Extrapunkte/Kulanz
-    leniencyFactor: 0.005,   // Wie stark die Kulanz danach quadratisch ansteigt (kleine Werte nutzen!)
-
-    perfectAccuracyThresholdMs: 15,   // Bis zu 15ms durchschnittliche Abweichung bleiben 100% (Score 10)
-    perfectConsistencyThresholdMs: 6, // Bis zu 6ms Standardabweichung bleiben 100% (Score 10)
-
     downbeatAccuracyWeight: 0.3,
+
+    // --- TOLERANZ-ZONEN (Ab wann gibt es Punktabzug?) ---
+    // 0.04 entspricht 20ms bei 120 BPM (Sehr präzise)
+    perfectAccuracyThresholdPct: 0.05,  
+    
+    // 0.02 entspricht 10ms bei 120 BPM (Strenge Grenze für Beschleunigung)
+    perfectConsistencyThresholdPct: 0.04, 
+
+    // --- KURVEN-EINSTELLUNGEN (Der "Sweet Spot" des Schwierigkeitsgrads) ---
+    // 0.12 entspricht ca. 60ms Abweichung bei 120 BPM
+    accuracyInflectionPct: 0.18,
+    
+    consistencyInflectionPct: 0.03,
+
+    accuracySteepness: 3.8,
+    consistencySteepness: 6,
+
+    accuracyLinearDropPct: 0.4,
+    consistencyLinearDropPct: 0.3,
+
+    // Penalty
+    faultPenaltyMultiplier: 2.0, 
+    
+    extraTapThresholdPct: 0.3,
+    missingTapThresholdPct: 1.5,
+
+    // --- UI & FEEDBACK ---
+    earlyLateThresholdPct: 0.06,
+
+    // --- LENIENCY ---
+    baseSilenceBeats: 8,
+    leniencyFactor: 0.005
 };
 
 export const BEATS = [

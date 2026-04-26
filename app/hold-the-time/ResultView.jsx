@@ -11,14 +11,84 @@ function StatCard({ label, value, highlight = false }) {
     );
 }
 
-function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, expectedBeats = [], pairs = [], extraTaps = [], missedBeats = [] }) {
+function TempoDriftGraph({ pairs }) {
+    const playedBeats = pairs.filter(p => !p.missed && p.phase === 'silence');
+    if (playedBeats.length < 2) return (
+        <div className="flex h-32 items-center justify-center rounded-lg border border-white/5 bg-black/20 text-xs text-neutral-500">
+            Not enough data for Tempo Drift analysis.
+        </div>
+    );
+
+    const maxAbsOffset = Math.max(50, ...playedBeats.map(p => Math.abs(p.deltaMs)));
+    const maxIndex = playedBeats.length - 1;
+    
+    const points = playedBeats.map((p, i) => {
+        const x = (i / maxIndex) * 100;
+        const y = 50 - ((p.deltaMs / maxAbsOffset) * 50);
+        return `${x},${y}`;
+    }).join(' ');
+
+    return (
+        <div className="flex flex-col gap-2">
+            <div className="flex justify-between text-[10px] uppercase tracking-wider text-neutral-500">
+                <span>Tempo Drift</span>
+            </div>
+            
+            <div className="relative h-32 w-full rounded-lg border border-white/5 bg-black/20 p-2">
+                <div className="relative h-full w-full">
+                    {/* Y-Achsen Labels */}
+                    <div className="absolute -left-1 top-0 text-[8px] text-amber-500/80 -translate-y-1/2">LATE (+{Math.round(maxAbsOffset)}ms)</div>
+                    <div className="absolute -left-1 top-1/2 text-[8px] text-emerald-500/80 -translate-y-1/2">0</div>
+                    <div className="absolute -left-1 bottom-0 text-[8px] text-cyan-500/80 translate-y-1/2">EARLY (-{Math.round(maxAbsOffset)}ms)</div>
+                    
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+                        <line x1="0" y1="50" x2="100" y2="50" stroke="#10b981" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.6" strokeDasharray="2" />
+                        
+                        <polyline
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                            className="text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                            points={points}
+                        />
+
+                        {playedBeats.map((p, i) => {
+                            const x = (i / maxIndex) * 100;
+                            const y = 50 - ((p.deltaMs / maxAbsOffset) * 50);
+                            const isLate = p.deltaMs > 0;
+                            return (
+                                <circle 
+                                    key={i} 
+                                    cx={x} 
+                                    cy={y} 
+                                    r="2" 
+                                    vectorEffect="non-scaling-stroke"
+                                    className={isLate ? "fill-amber-400" : "fill-cyan-400"}
+                                />
+                            );
+                        })}
+                    </svg>
+                </div>
+            </div>
+            
+            <div className="flex justify-between text-[8px] text-neutral-600">
+                <span>Start (Silence)</span>
+                <span>Timepoint</span>
+                <span>End</span>
+            </div>
+        </div>
+    );
+}
+
+function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, expectedBeats = [], pairs = [], extraTaps = [], missedBeats = [], earlyLateThresholdMs = 15 }) {
     const outerRef = useRef(null);
     const innerRef = useRef(null);
     const zoomRef = useRef(1);
-    // NEU: Wir nutzen useRef statt useState für das Label, um React Re-Renders zu verhindern!
     const zoomLabelRef = useRef(null); 
 
-    // Zoom-Logik
+    // Zoom
     useEffect(() => {
         const outer = outerRef.current;
         const inner = innerRef.current;
@@ -38,7 +108,6 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
             inner.style.width = `${newZoom * 100}%`;
             outer.scrollLeft = (rect.width * newZoom) * percentUnderPinch - xWithinVisible;
             
-            // NEU: Direktes DOM-Update für das Label (Kein Ruckeln mehr!)
             if (zoomLabelRef.current) {
                 zoomLabelRef.current.textContent = `${newZoom.toFixed(1)}x`;
                 if (newZoom > 1.1) {
@@ -93,8 +162,8 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
                 className="relative h-28 w-full overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-neutral-950/50 no-scrollbar"
                 style={{ 
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none', /* Firefox */
-                    msOverflowStyle: 'none'  /* IE/Edge */
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
                 }}
             >
                 {/* CSS Inline-Hack für Chrome/Safari */}
@@ -125,9 +194,8 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
                             <div key={pair.expectedTime} 
                                 className="group absolute top-4 bottom-4 w-8 flex justify-center items-center z-20 hover:z-50 cursor-crosshair"
                                 style={{ left: `${((pair.correctedTime - startMs) / widthMs) * 100}%`, transform: 'translateX(-50%)' }}>
-                                <div className={`h-full rounded-full transition-all group-hover:scale-y-110 ${isReturn ? 'w-1 bg-fuchsia-300 shadow-[0_0_10px_#d946ef]' : 'w-[3px] ' + (diff < -15 ? 'bg-emerald-400' : diff > 15 ? 'bg-amber-400' : 'bg-cyan-400')}`} />
+                                <div className={`h-full rounded-full transition-all group-hover:scale-y-110 ${isReturn ? 'w-1 bg-fuchsia-300 shadow-[0_0_10px_#d946ef]' : 'w-[3px] ' + (diff < -earlyLateThresholdMs ? 'bg-emerald-400' : diff > earlyLateThresholdMs ? 'bg-amber-400' : 'bg-cyan-400')}`} />
                                 
-                                {/* Tooltip Position angepasst: -top-5 statt -top-8 */}
                                 <div className="absolute top-1/3 opacity-0 group-hover:opacity-100 transition-all pointer-events-none scale-90 group-hover:scale-100 z-50">
                                     <div className="bg-neutral-900 border border-white/20 text-white text-[10px] px-2 py-1 rounded-md shadow-2xl font-mono whitespace-nowrap">
                                         {diff > 0 ? '+' : ''}{diff} ms
@@ -184,16 +252,16 @@ function CombinedTimelineRow({ startMs, endMs, silenceStartMs, silenceEndMs, exp
 
 
 
-function ScoreGraph({ label, currentError, inflection, steepness, accuracyLinearDropMs, colorClass, score }) {
+function ScoreGraph({ label, currentError, inflection, steepness, linearDropMs, colorClass, score }) {
     const points = [];
-    const maxMs = inflection * 2.5; 
+    const maxMs = Math.max(inflection * 2.5, currentError * 1.15); 
     
     for (let x = 0; x <= maxMs; x += maxMs / 50) {
-        const y = 100 / (1 + Math.pow(x / inflection, steepness) + (x / accuracyLinearDropMs));
+        const y = 100 / (1 + Math.pow(x / inflection, steepness) + (x / linearDropMs));
         points.push(`${(x / maxMs) * 100},${100 - y}`);
     }
 
-    const userX = (clamp(currentError, 0, maxMs) / maxMs) * 100;
+    const userX = (currentError / maxMs) * 100;
     const userY = 100 - score;
 
     return (
@@ -205,12 +273,10 @@ function ScoreGraph({ label, currentError, inflection, steepness, accuracyLinear
             
             <div className="relative h-32 w-full rounded-lg border border-white/5 bg-black/20 p-2">
                 <div className="relative h-full w-full">
-                    {/* Y-Achse Beschriftung */}
                     <div className="absolute -left-1 top-0 text-[8px] text-neutral-600 -translate-y-1/2">100</div>
                     <div className="absolute -left-1 bottom-0 text-[8px] text-neutral-600 translate-y-1/2">0</div>
                     
                     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-                        {/* Rasterlinie */}
                         <line x1="0" y1="50" x2="100" y2="50" stroke="white" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="4" opacity="0.1" />
                         
                         <polyline
@@ -282,17 +348,33 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 pairs={analysis.pairs || []} 
                 extraTaps={analysis.extraTaps || []}
                 missedBeats={analysis.missedBeats || []}
+                earlyLateThresholdMs={analysis.rawMath?.earlyLateThresholdMs || 15}
             />
 
             <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
                 <StatCard label="Avg Offset" value={formatMs(analysis.averageOffsetMs)} />
-                <StatCard label="Early/Late Taps" value={`${analysis.earlyCount} / ${analysis.lateCount}`} />
-                <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length} / ${analysis.extraTaps.length}`} highlight={analysis.totalFaults > 0} />
-                <StatCard label="Beat Tempo" value={`${selectedBeat?.bpm} BPM`} />
+                {/* <StatCard label="Early/Late Taps" value={`${analysis.earlyCount} / ${analysis.lateCount}`} /> */}
+                <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length} / ${analysis.extraTaps.length}`} />
+                <StatCard label="Drift" value={`${analysis.driftSlope.toFixed(2)} ms/Beat`} />
+                <StatCard 
+                    label="Tendency" 
+                    value={
+                        analysis.tempoTrend === 'speeding_up' ? 'Rushing' : 
+                        analysis.tempoTrend === 'slowing_down' ? 'Dragging' :
+                        analysis.tempoTrend === 'wobbly' ? 'Wobbly' :
+                        'Steady'
+                    }
+                />
             </div>
 
             {showAnalysis && (
                 <div className="mt-3 flex flex-col gap-4">
+                    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+                        <TempoDriftGraph pairs={analysis.pairs} />
+                        <div className="mt-4 text-[11px] text-stone-400 border-t border-white/5 pt-2 text-center">
+                            Drift <strong>{analysis.driftSlope > 0 ? '+' : ''}{analysis.driftSlope.toFixed(2)} ms</strong> per Beat.
+                        </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
                             <ScoreGraph 
@@ -300,7 +382,7 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                                 currentError={analysis.rawMath.effectiveOffsetMs}
                                 inflection={analysis.rawMath.accuracyInflectionMs}
                                 steepness={SCORING_CONFIG.accuracySteepness}
-                                accuracyLinearDropMs={SCORING_CONFIG.accuracyLinearDropMs}
+                                linearDropMs={analysis.beatMs * SCORING_CONFIG.accuracyLinearDropPct}
                                 colorClass="text-emerald-400"
                                 score={analysis.rawMath.generalAccuracyRaw}
                             />
@@ -321,16 +403,17 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
                             <ScoreGraph 
                                 label="Consistency Curve"
-                                currentError={analysis.rawMath.effectiveStdDevMs}
+                                currentError={analysis.rawMath.effectiveJitterMs}
                                 inflection={analysis.rawMath.consistencyInflectionMs}
                                 steepness={SCORING_CONFIG.consistencySteepness}
-                                accuracyLinearDropMs={SCORING_CONFIG.accuracyLinearDropMs}
+                                linearDropMs={analysis.beatMs * SCORING_CONFIG.consistencyLinearDropPct}
                                 colorClass="text-amber-400"
                                 score={analysis.rawMath.consistencyRawBeforePenalty}
                             />
                             <div className="mt-4 space-y-1 text-[11px] text-stone-400 border-t border-white/5 pt-2">
-                                <div className="flex justify-between"><span>Base Variance (StdDev):</span> <span className="text-white">{Math.round(analysis.rawMath.stdDeviationMs)}ms</span></div>
-                                <div className="flex justify-between"><span>Effective Variance (Zone applied):</span> <span className="text-amber-300">{Math.round(analysis.rawMath.effectiveStdDevMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Base Jitter (Interval Change):</span> <span className="text-white">{Math.round(analysis.rawMath.jitterMs)}ms</span></div>
+                                <div className="flex justify-between"><span>Effective Jitter (Zone applied):</span> <span className="text-amber-300">{Math.round(analysis.rawMath.effectiveJitterMs)}ms</span></div>
+                                
                                 <div className="flex justify-between border-t border-white/5 mt-2 pt-2"><span>Consistency Base Score:</span> <span className="text-white">{analysis.rawMath.consistencyRawBeforePenalty.toFixed(1)}%</span></div>
                                 <div className="flex justify-between"><span>Faults (Miss/Extra):</span> <span className="text-rose-400">{analysis.rawMath.totalFaults}</span></div>
                                 <div className="flex justify-between"><span>Penalty ({analysis.rawMath.penaltyPerFault.toFixed(1)}% per fault):</span> <span className="text-rose-400">-{Math.round(analysis.rawMath.totalFaults * analysis.rawMath.penaltyPerFault * 10) / 10}%</span></div>
