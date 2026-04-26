@@ -5,8 +5,12 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
 export const metadata: Metadata = {
+    metadataBase: new URL("https://synchro.leonardsima.de"),
     title: "Synchro",
     description: "Rhythm and Timing Games",
+    alternates: {
+        canonical: "/",
+    },
 };
 
 export default function RootLayout({
