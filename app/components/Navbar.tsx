@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const GAMES = [
     { id: "poly-rhythm", label: "Polyrhythm", href: "/poly-rhythm" },
@@ -11,6 +11,13 @@ const GAMES = [
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
+
+    const handleLinkClick = (href: string) => {
+        if (pathname === href) {
+            window.location.reload();
+        }
+    };
 
     return (
         <nav className="w-full flex-none">
@@ -19,6 +26,7 @@ export default function Navbar() {
                     <Link
                         key={game.id}
                         href={game.href}
+                        onClick={() => handleLinkClick(game.href)}
                         className={`px-4 py-2 font-medium transition-colors flex items-center ${ 
                             pathname === game.href
                                 ? 'text-neutral-900 dark:text-neutral-300'
