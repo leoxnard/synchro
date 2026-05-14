@@ -11,6 +11,7 @@ import GameContainer from '../components/GameContainer';
 
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import { computeFinalScore } from './utils/scoringEngine';
+import { loadPolyrhythmConfig, savePolyrhythmConfig } from '../lib/configStorage';
 import { 
     getOrientationFromWindow,
     getRhythmToneHz,
@@ -29,21 +30,24 @@ import {
 } from './constants/gameConfig';
 
 export default function PolyrhythmGame() {
+    const configLoadRef = useRef(null);
+    if (!configLoadRef.current) {
+        configLoadRef.current = loadPolyrhythmConfig();
+    }
+    const initialConfig = configLoadRef.current;
+
     const [gameState, setGameState] = useState('setup'); 
     const [count, setCount] = useState(4); 
-    const [bpm, setBpm] = useState(90);
-    const [measures, setMeasures] = useState(4);
-    const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
-    const [countInBars, setCountInBars] = useState(1);
-    const [tracks, setTracks] = useState([
-        { id: 1, pulses: 4, key: 'shift' },
-        { id: 2, pulses: 3 , key: ' ' }
-    ]);
+    const [bpm, setBpm] = useState(initialConfig.bpm);
+    const [measures, setMeasures] = useState(initialConfig.measures);
+    const [beatsPerMeasure, setBeatsPerMeasure] = useState(initialConfig.beatsPerMeasure); 
+    const [countInBars, setCountInBars] = useState(initialConfig.countInBars);
+    const [tracks, setTracks] = useState(initialConfig.tracks);
     const [score, setScore] = useState(0);
     const [activeKeys, setActiveKeys] = useState({});
     const [expectedTaps, setExpectedTaps] = useState([]);
     const [detailedResults, setDetailedResults] = useState([]);
-    const [latencyCompMs, setLatencyCompMs] = useState(DEFAULT_LATENCY_COMP_MS);
+    const [latencyCompMs, setLatencyCompMs] = useState(initialConfig.latencyCompMs);
     const [lastAutoCorrectionMs, setLastAutoCorrectionMs] = useState(0);
     const [debugAnalysis, setDebugAnalysis] = useState(null);
     const [isClientReady, setIsClientReady] = useState(false);
@@ -757,6 +761,19 @@ export default function PolyrhythmGame() {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (!isClientReady) return;
+        
+        savePolyrhythmConfig({
+            bpm,
+            measures,
+            beatsPerMeasure,
+            countInBars,
+            tracks,
+            latencyCompMs
+        });
+    }, [bpm, measures, beatsPerMeasure, countInBars, tracks, latencyCompMs, isClientReady]);
 
     if (!isClientReady) return <div className="loading-placeholder" />;
 
