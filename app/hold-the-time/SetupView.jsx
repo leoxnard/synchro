@@ -2,6 +2,34 @@ import { BEATS } from "./constants/gameConfig";
 import NumberStepper from "../components/NumberStepper";
 import { MdVolumeUp } from 'react-icons/md';
 
+function ActionButtons({ actionButtons = [], onStart, startLabel = 'Start', compact = false }) {
+    const resolvedButtons = actionButtons.length > 0
+        ? actionButtons
+        : [{ id: 'default-start', label: startLabel, onClick: onStart, style: 'primary' }];
+
+    return (
+        <div className={`grid w-full gap-2 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
+            {resolvedButtons.map((button) => {
+                const isPrimary = button.style === 'primary';
+                return (
+                    <button
+                        key={button.id}
+                        type="button"
+                        onClick={button.onClick}
+                        className={`rounded-full px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] transition-transform active:scale-95 ${
+                            isPrimary
+                                ? 'bg-stone-200 text-neutral-950'
+                                : 'border border-white/10 bg-white/[0.03] text-stone-100 hover:bg-white/[0.06]'
+                        }`}
+                    >
+                        {button.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 function BeatCard({ beat, selected, onSelect, isPreviewing, onPreviewStart }) {
     return (
         <div className={`relative flex items-center rounded-2xl border transition-colors ${selected ? 'border-cyan-300/30 bg-cyan-400/10' : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]'}`}>
@@ -26,10 +54,10 @@ function BeatCard({ beat, selected, onSelect, isPreviewing, onPreviewStart }) {
     );
 }
 
-function SetupDesktop({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
+function SetupDesktop({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, startLabel = 'Start', actionButtons = [], previewingBeatId, onPreviewStart }) {
     return (
         <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
-            <div className="flex flex-1 flex-col justify-center w-full pb-8">
+            <div className="flex flex-1 flex-col justify-center w-full">
                 <div className="text-center border-b border-white/10 pb-4 mb-4">
                     <span className="text-3xl font-light text-neutral-400 tracking-widest">Hold The Tempo</span>
                 </div>
@@ -52,15 +80,15 @@ function SetupDesktop({ silentBars, setSilentBars, selectedBeatId, setSelectedBe
                 </div>
             </div>
             
-            <div className="flex flex-col items-center mt-auto pt-4">
-                <button type="button" onClick={onStart} className="rounded-full bg-stone-200 px-8 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 transition-transform active:scale-95">Start</button>
+            <div className="flex flex-col items-center mt-auto pt-4 w-full">
+                <ActionButtons actionButtons={actionButtons} onStart={onStart} startLabel={startLabel} />
             </div>
             
         </div>
     );
 }
 
-function SetupMobile({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, previewingBeatId, onPreviewStart }) {
+function SetupMobile({ silentBars, setSilentBars, selectedBeatId, setSelectedBeatId, onStart, startLabel = 'Start', actionButtons = [], previewingBeatId, onPreviewStart }) {
     return (
         <div className="flex h-full w-full flex-col overflow-y-auto pb-2">
             
@@ -83,8 +111,8 @@ function SetupMobile({ silentBars, setSilentBars, selectedBeatId, setSelectedBea
                 </div>
             </div>
 
-            <div className="flex flex-col items-center mt-auto pt-4">
-                <button type="button" onClick={onStart} className="rounded-full bg-stone-200 px-6 py-3 text-xs font-bold uppercase tracking-[0.22em] text-neutral-950 active:scale-95">Start</button>
+            <div className="flex flex-col items-center mt-auto pt-4 w-full">
+                <ActionButtons actionButtons={actionButtons} onStart={onStart} startLabel={startLabel} compact={true} />
             </div>
             
         </div>

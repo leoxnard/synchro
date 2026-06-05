@@ -14,9 +14,8 @@ export default function Navbar() {
     const router = useRouter();
 
     const handleLinkClick = (href: string) => {
-        if (pathname === href) {
-            window.location.reload();
-        }
+        // Always push to clear query parameters (e.g., ?room=...) and reset game state
+        router.push(href);
     };
 
     return (

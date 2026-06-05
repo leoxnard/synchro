@@ -11,6 +11,7 @@ type NumberStepperNoInputProps = {
     max: number;
     step?: number;
     compact?: boolean;
+    monitoring?: boolean;
     className?: string;
 };
 
@@ -22,6 +23,7 @@ export function NumberStepperNoInput({
     max,
     step = 1,
     compact = false,
+    monitoring = false,
     className = ''
 }: NumberStepperNoInputProps) {
 
@@ -46,13 +48,13 @@ export function NumberStepperNoInput({
                     type="button"
                     onClick={() => handleStep(-1)}
                     aria-label={label ? `${label} decrease` : 'Decrease value'}
-                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer"
+                    className={`h-9 w-9 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${monitoring ? 'hidden' : ''}`}
                 >
                     <SlArrowLeft size={16} />
                 </button>
 
                 <div
-                    className={`w-16 bg-neutral-900 rounded-lg border border-neutral-700 flex items-center justify-center font-bold text-center text-stone-100 select-none ${compact ? 'h-9 px-2 text-base' : 'h-10 px-3 text-lg'}`}
+                    className={`w-16 bg-neutral-900 rounded-full border border-neutral-700 flex items-center justify-center font-bold text-center text-stone-100 select-none ${compact ? 'h-9 px-2 text-base' : 'h-10 px-3 text-lg'}`}
                 >
                     {value}
                 </div>
@@ -61,7 +63,7 @@ export function NumberStepperNoInput({
                     type="button"
                     onClick={() => handleStep(1)}
                     aria-label={label ? `${label} increase` : 'Increase value'}
-                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer"
+                    className={`h-9 w-9 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${monitoring ? 'hidden' : ''}`}
                 >
                     <SlArrowRight size={16} />
                 </button>
@@ -78,6 +80,7 @@ type NumberStepperInputProps = {
     max: number;
     step?: number;
     compact?: boolean;
+    monitoring?: boolean;
     className?: string;
 };
 
@@ -89,6 +92,7 @@ export function NumberStepperInput({
     max,
     step = 1,
     compact = false,
+    monitoring = false,
     className = ''
 }: NumberStepperInputProps) {
     const inputId = useId();
@@ -121,7 +125,7 @@ export function NumberStepperInput({
                     type="button"
                     onClick={() => handleStep(-1)}
                     aria-label={label ? `${label} decrease` : 'Decrease value'}
-                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0"
+                    className={`h-9 w-9 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 ${monitoring ? 'hidden' : ''}`}
                 >
                     <SlArrowLeft size={16} />
                 </button>
@@ -140,14 +144,14 @@ export function NumberStepperInput({
                         onChange(clampValue(rawValue));
                     }}
                     onBlur={() => onChange(clampValue(value))}
-                    className={`w-16 bg-neutral-900 rounded-lg border border-neutral-700 focus:border-stone-400 focus:outline-none transition-colors font-bold text-center appearance-none ${compact ? 'h-9 px-2 text-base' : 'h-10 px-3 text-lg'}`}
+                    className={`w-16 bg-neutral-900 rounded-full border border-neutral-700 focus:border-stone-400 focus:outline-none transition-colors font-bold text-center appearance-none ${compact ? 'h-9 px-2 text-base' : 'h-10 px-3 text-lg'}`}
                 />
 
                 <button
                     type="button"
                     onClick={() => handleStep(1)}
                     aria-label={label ? `${label} increase` : 'Increase value'}
-                    className="h-9 w-9 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0"
+                    className={`h-9 w-9 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/70 transition-colors flex items-center justify-center flex-shrink-0 ${monitoring ? 'hidden' : ''}`}
                 >
                     <SlArrowRight size={16} />
                 </button>

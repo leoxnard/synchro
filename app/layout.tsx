@@ -27,7 +27,6 @@ export default function RootLayout({
                     <Navbar />
                 </div>
 
-                {/* Main Content - Jetzt mit h-full, damit es nicht mehr wachsen kann! */}
                 <main className="flex-1 relative z-10 flex flex-col w-full h-full min-h-0 items-center justify-center">
                     {children}
                 </main>

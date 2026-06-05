@@ -73,7 +73,7 @@ function DesktopSetupView({
                                 <span className="text-lg font-bold text-neutral-600">on</span>
 
                                 <div
-                                    className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
+                                    className="flex-1 bg-white/[0.03] hover:bg-white/[0.06] rounded-full p-2 flex items-center justify-center border border-white/10 focus-within:border-stone-300 transition-colors cursor-pointer outline-none relative group"
                                     tabIndex={0}
                                     onKeyDown={(e) => {
                                         e.preventDefault();
@@ -164,7 +164,7 @@ function MobileSetupView({
 
                 <div className="grid grid-cols-2 gap-2 mb-4 flex-1 content-start">
                     {tracks.map((track, index) => (
-                        <div key={track.id} className="rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] p-2 flex flex-col items-center text-center">
+                        <div key={track.id} className="p-2 flex flex-col items-center text-center">
                             <div className="text-[9px] uppercase tracking-[0.1em] text-neutral-500 mb-1">
                                 Rhythm {index + 1}
                             </div>
@@ -173,7 +173,7 @@ function MobileSetupView({
                                 <button
                                     type="button"
                                     onClick={() => adjustPulses(track.id, -1)}
-                                    className="h-7 w-7 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all flex items-center justify-center"
+                                    className="h-7 w-7 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all flex items-center justify-center"
                                     aria-label={`Decrease ${track.id} beats`}
                                 >
                                     <SlArrowLeft size={13} />
@@ -186,7 +186,7 @@ function MobileSetupView({
                                 <button
                                     type="button"
                                     onClick={() => adjustPulses(track.id, 1)}
-                                    className="h-7 w-7 rounded-md border border-neutral-700 bg-neutral-800/70 text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all flex items-center justify-center"
+                                    className="h-7 w-7 rounded-full border border-neutral-700 bg-neutral-800/70 text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all flex items-center justify-center"
                                     aria-label={`Increase ${track.id} beats`}
                                 >
                                     <SlArrowRight size={13} />
@@ -210,7 +210,7 @@ function MobileSetupView({
                         <button
                             type="button"
                             onClick={addTrack}
-                            className="rounded-lg border border-dashed border-neutral-600 bg-white/[0.02] hover:bg-white/[0.05] p-2 flex items-center justify-center text-neutral-400 hover:text-neutral-300 transition-colors text-sm font-light"
+                            className="rounded-full border border-dashed border-neutral-600 bg-white/[0.02] hover:bg-white/[0.05] p-2 flex items-center justify-center text-neutral-400 hover:text-neutral-300 transition-colors text-sm font-light"
                         >
                             + Add
                         </button>

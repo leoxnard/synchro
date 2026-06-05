@@ -1,7 +1,7 @@
 // app/poly-rhythm/PolyRhythmGame.jsx
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import SetupView from './SetupView';
 import PlayingView from './PlayingView';
 import PracticeView from './PracticeView';
@@ -19,7 +19,6 @@ import {
 } from './utils/mathHelpers';
 
 import {
-    DEFAULT_LATENCY_COMP_MS,
     START_TAP_GRACE_MS,
     END_TAP_GRACE_MS,
     END_TAP_BASE_BUFFER_MS,
@@ -30,11 +29,7 @@ import {
 } from './constants/gameConfig';
 
 export default function PolyrhythmGame() {
-    const configLoadRef = useRef(null);
-    if (!configLoadRef.current) {
-        configLoadRef.current = loadPolyrhythmConfig();
-    }
-    const initialConfig = configLoadRef.current;
+    const initialConfig = useMemo(() => loadPolyrhythmConfig(), []);
 
     const [gameState, setGameState] = useState('setup'); 
     const [count, setCount] = useState(4); 

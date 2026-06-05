@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { SCORING_CONFIG } from './constants/gameConfig';
-import { formatMs, clamp } from './utils/mathHelpers';
+import { formatMs } from './utils/mathHelpers';
 
 function StatCard({ label, value, highlight = false }) {
     return (
@@ -309,7 +309,7 @@ function ScoreGraph({ label, currentError, inflection, steepness, linearDropMs, 
     );
 }
 
-export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBackToSetup, isMobile, showAnalysis, onToggleAnalysis }) {
+export default function ResultView({ analysis, onPlayAgain, onBackToSetup, isMobile, showAnalysis, onToggleAnalysis }) {
     const isDebugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
     if (!analysis) return null;
@@ -356,13 +356,13 @@ export default function ResultView({ analysis, selectedBeat, onPlayAgain, onBack
                 {/* <StatCard label="Early/Late Taps" value={`${analysis.earlyCount} / ${analysis.lateCount}`} /> */}
                 <StatCard label="Missed/Extra" value={`${analysis.missedBeats.length} / ${analysis.extraTaps.length}`} />
                 <StatCard label="Drift" value={`${analysis.driftSlope.toFixed(2)} ms/Beat`} />
-                <StatCard 
-                    label="Tendency" 
+                <StatCard
+                    label="Tendency"
                     value={
-                        analysis.tempoTrend === 'speeding_up' ? 'Rushing' : 
-                        analysis.tempoTrend === 'slowing_down' ? 'Dragging' :
-                        analysis.tempoTrend === 'wobbly' ? 'Wobbly' :
-                        'Steady'
+                        analysis.tempoTrend === 'speeding_up' ? 'Rushing' :
+                            analysis.tempoTrend === 'slowing_down' ? 'Dragging' :
+                                analysis.tempoTrend === 'wobbly' ? 'Wobbly' :
+                                    'Steady'
                     }
                 />
             </div>
