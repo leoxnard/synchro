@@ -628,7 +628,7 @@ export default function PolyrhythmGame() {
             tracks,
             measureDuration,
             beatsPerMeasure,
-            currentLatencyCompMs: latencyCompMs,
+            rawLatencyCompMs: latencyCompMs,
             isMobileLayoutEnabled
         });
 
