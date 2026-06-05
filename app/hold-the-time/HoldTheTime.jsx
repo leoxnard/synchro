@@ -326,9 +326,10 @@ export default function HoldTheTime() {
                 setRoomId(room.id);
                 setRoomState(state);
                 setRoomPlayers(players);
-                // If our player row no longer appears, check if we've been banned
+                // If our player row no longer appears, check if we've been banned.
+                // Use room.id, not roomId — the setRoomId() above hasn't applied yet.
                 try {
-                    const myRow = await getRoomPlayer(roomId, playerId);
+                    const myRow = await getRoomPlayer(room.id, playerId);
                     if (myRow && myRow.is_banned) {
                         setJoinError('You were banned from this room');
                         restartToSetup();
