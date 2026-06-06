@@ -7,7 +7,6 @@ create table if not exists public.htt_rooms (
     beat_id text not null,
     silent_bars integer not null check (silent_bars between 1 and 16),
     phase text not null default 'lobby' check (phase in ('lobby', 'running', 'round_result', 'final', 'sync_failed')),
-    sync_failed_player_ids text[] not null default '{}',
     current_round integer not null default 0,
     total_rounds integer not null default 5,
     current_beat_id text,
@@ -64,17 +63,6 @@ begin
             add constraint htt_rooms_phase_check
             check (phase in ('lobby', 'running', 'round_result', 'final', 'sync_failed'));
     end if;
-
-    if not exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-          and table_name = 'htt_rooms'
-          and column_name = 'sync_failed_player_ids'
-    ) then
-        alter table public.htt_rooms
-            add column sync_failed_player_ids text[] not null default '{}';
-    end if;
 end $$;
 
 create table if not exists public.htt_room_players (
@@ -84,7 +72,6 @@ create table if not exists public.htt_room_players (
     player_name text not null,
     is_host boolean not null default false,
     ready boolean not null default true,
-    first_tap_at timestamptz,
     is_banned boolean not null default false,
     is_online boolean not null default true,
     last_seen_at timestamptz not null default now(),
@@ -94,7 +81,6 @@ create table if not exists public.htt_room_players (
 
 alter table public.htt_room_players add column if not exists is_online boolean not null default true;
 alter table public.htt_room_players add column if not exists last_seen_at timestamptz not null default now();
-alter table public.htt_room_players add column if not exists first_tap_at timestamptz;
 alter table public.htt_room_players add column if not exists is_banned boolean not null default false;
 
 create table if not exists public.htt_room_rounds (
@@ -131,6 +117,8 @@ create index if not exists idx_htt_room_results_room_round on public.htt_room_re
 
 alter table public.htt_rooms enable row level security;
 alter table public.htt_room_players enable row level security;
+alter table public.htt_room_rounds enable row level security;
+alter table public.htt_room_results enable row level security;
 
 do $$
 begin

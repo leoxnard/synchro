@@ -85,7 +85,6 @@ export async function createRoom({ roomToken, mode, beatId, silentBars, hostPlay
             player_name: hostName,
             is_host: true,
             ready: true,
-            first_tap_at: null,
             is_banned: false,
         });
 
@@ -178,7 +177,6 @@ export async function joinRoom({ roomId, playerId, playerName }) {
             room_id: roomId,
             player_id: playerId,
             player_name: playerName,
-            first_tap_at: null,
             is_banned: false,
             is_online: true,
             last_seen_at: new Date().toISOString(),
@@ -224,7 +222,7 @@ export async function listRoomPlayers(roomId) {
     const supabase = getSupabase();
     const { data, error } = await supabase
         .from('htt_room_players')
-        .select('player_id, player_name, is_host, ready, first_tap_at, is_banned, is_online, last_seen_at, joined_at')
+        .select('player_id, player_name, is_host, ready, is_banned, is_online, last_seen_at, joined_at')
         .eq('room_id', roomId)
         .eq('is_banned', false)
         .order('joined_at', { ascending: true });
@@ -242,7 +240,6 @@ export async function listRoomPlayers(roomId) {
             isOnline: true,
             lastSeenAt: null,
             isBanned: false,
-            firstTapAt: null,
             id: player.player_id,
             name: player.player_name,
             role: player.is_host ? 'host' : 'player',
@@ -255,7 +252,6 @@ export async function listRoomPlayers(roomId) {
     return (data || []).map((player) => ({
         isOnline: Boolean(player.is_online) && (nowMs - new Date(player.last_seen_at).getTime()) < 20000,
         lastSeenAt: player.last_seen_at,
-        firstTapAt: player.first_tap_at,
         isBanned: Boolean(player.is_banned),
         id: player.player_id,
         name: player.player_name,
@@ -269,7 +265,7 @@ export async function getRoomPlayer(roomId, playerId) {
     try {
         const { data, error } = await supabase
             .from('htt_room_players')
-            .select('player_id, player_name, is_host, ready, first_tap_at, is_banned, is_online, last_seen_at, joined_at')
+            .select('player_id, player_name, is_host, ready, is_banned, is_online, last_seen_at, joined_at')
             .eq('room_id', roomId)
             .eq('player_id', playerId)
             .maybeSingle();
@@ -291,34 +287,6 @@ export async function getRoomPlayer(roomId, playerId) {
         }
         throw e;
     }
-}
-
-export async function markPlayerFirstTap({ roomId, playerId }) {
-    const supabase = getSupabase();
-    const { error } = await supabase
-        .from('htt_room_players')
-        .update({
-            first_tap_at: new Date().toISOString(),
-        })
-        .eq('room_id', roomId)
-        .eq('player_id', playerId)
-        .is('first_tap_at', null);
-
-    if (error && isMissingPlayerMetaColumnError(error)) return;
-    if (error) throw error;
-}
-
-export async function resetRoomPlayerFirstTaps(roomId) {
-    const supabase = getSupabase();
-    const { error } = await supabase
-        .from('htt_room_players')
-        .update({
-            first_tap_at: null,
-        })
-        .eq('room_id', roomId);
-
-    if (error && isMissingPlayerMetaColumnError(error)) return;
-    if (error) throw error;
 }
 
 export async function touchPlayerPresence({ roomId, playerId }) {
@@ -454,8 +422,6 @@ export async function startRoomRound({ roomId, beatId, roundStartsAt = null }) {
         return existingRound;
     }
 
-    await resetRoomPlayerFirstTaps(roomId);
-
     const nextRound = room.current_round + 1;
     const { error: roundUpsertError } = await supabase
         .from('htt_room_rounds')
@@ -482,7 +448,6 @@ export async function startRoomRound({ roomId, beatId, roundStartsAt = null }) {
 
     const updatePayload = {
         phase: 'running',
-        sync_failed_player_ids: [],
         current_round: nextRound,
         current_beat_id: beatId,
         active_round_id: roundRow.id,

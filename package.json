@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate:schema": "supabase db dump --schema public -f supabase/schema.sql"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
