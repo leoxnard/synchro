@@ -59,10 +59,11 @@ export default function PrivacyPolicy() {
                 <section className="space-y-4">
                     <h2 className="text-2xl font-medium text-neutral-100">4. Analytics</h2>
                     <p className="text-neutral-100">
-                        We use Vercel Analytics to understand overall website performance and usage.
-                        According to the provider, this is designed to work without invasive tracking.
-                        Data may still be processed on Vercel infrastructure for aggregated insights
-                        and service quality.
+                        We run our own installation of Umami, a privacy-friendly analytics tool, on
+                        the same server as this site. It records page views, the referring site, an
+                        approximate country, and a coarse device and browser type. It sets no cookies,
+                        hashes IP addresses instead of storing them, and cannot follow you to other
+                        websites. No data is shared with a third party.
                     </p>
                 </section>
 
