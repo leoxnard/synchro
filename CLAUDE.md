@@ -50,7 +50,7 @@ code paths fail loudly rather than silently.
 
 ```
 app/
-  layout.tsx            Root layout: fixed 100dvh column, Navbar / main / Footer, Vercel Analytics
+  layout.tsx            Root layout: fixed 100dvh column, Navbar / main / Footer, Umami analytics
   page.tsx              "/" → redirect to /poly-rhythm
   globals.css           Tailwind v4 entry + custom classes (.tempo-window, .tempo-orb-*)
   robots.ts, sitemap.ts
@@ -220,7 +220,9 @@ file should import `@supabase/supabase-js`.
 
 ## Deployment
 
-Vercel. `@vercel/analytics` is mounted in `app/layout.tsx`.
+Self-hosted on leosrv via Coolify, behind the Cloudflare Tunnel (there is no
+Dockerfile in the repo; Coolify builds it). Analytics is self-hosted Umami
+(`app/lib/analytics.ts`); there is no Vercel.
 `next.config.ts` allows `*.loca.lt` dev origins for tunneling to a phone during
 timing tests — that's the normal way to check touch/latency behavior, since
 mobile Safari behaves very differently from desktop.
